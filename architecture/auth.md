@@ -38,9 +38,16 @@ lifetime, because no `revoked_token_handler` is configured on
 
 Both `register` and `login` opt out of the auth middleware with
 `exclude_from_auth=True` on the handler, not through `jwt_cookie_auth`'s
-`exclude` list — that list is reserved for path-shaped exclusions (`/docs`,
-`/health`), each anchored with `^` so a future route merely containing
-`/docs` as a path segment isn't accidentally deauthenticated.
+`exclude` list — that list is reserved for path-shaped exclusions, each
+anchored with `^` so a future route merely containing `/docs` as a path
+segment isn't accidentally deauthenticated.
+
+The anonymous surface is therefore exactly four prefixes: `/docs` and
+`/health`, plus `/static` (Swagger's offline assets, served from there
+because `swagger_offline_docs` is on — without the exclusion the docs page
+loads but every asset request 401s) and `/metrics` (a Prometheus scrape
+target must be reachable without a session cookie; it carries process and
+request metrics, no user data).
 
 ## Request-time identity
 
