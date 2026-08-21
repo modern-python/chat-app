@@ -102,6 +102,16 @@ async def test_me_rejects_token_with_non_numeric_subject(client: AsyncClient) ->
     assert response.status_code == 401
 
 
+async def test_static_swagger_assets_are_reachable_without_a_cookie(client: AsyncClient) -> None:
+    response = await client.get("/static/swagger-ui-bundle.js")
+    assert response.status_code == 200
+
+
+async def test_metrics_are_reachable_without_a_cookie(client: AsyncClient) -> None:
+    response = await client.get("/metrics")
+    assert response.status_code == 200
+
+
 @pytest.mark.usefixtures("db_session")
 async def test_me_rejects_token_for_a_user_that_no_longer_exists(client: AsyncClient) -> None:
     # A validly signed token whose subject has no matching row: session.get returns None and

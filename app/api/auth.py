@@ -47,6 +47,12 @@ jwt_cookie_auth: typing.Final = JWTCookieAuth[tables.UsersTable](
         # as a substring (e.g. "/api/chats/{id}/health").
         "^/docs",
         "^/health",
+        # Swagger's offline assets (settings.swagger_offline_docs=True) are served from here;
+        # without this the docs page loads but every asset request 401s for an anonymous visitor.
+        "^/static",
+        # A Prometheus scrape target must be reachable without a session cookie; the endpoint
+        # carries no user data, only process/request metrics.
+        "^/metrics",
     ],
 )
 
