@@ -13,7 +13,6 @@ services:
       db:
         condition: service_healthy
     environment:
-      - SERVICE_DEBUG=true
       - SERVICE_ENVIRONMENT=ci
       - DB_DSN=postgresql+asyncpg://postgres:password@db/postgres
       - JWT_SECRET=insecure-ci-secret-do-not-use-in-prod

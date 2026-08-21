@@ -13,6 +13,10 @@ class Settings(pydantic_settings.BaseSettings):
     service_name: str = "chat-app"
     service_version: str = "1.0.0"
     service_environment: str = "local"
+    # Enabling this turns on SQLAlchemy's echo/echo_pool (app/database/resources.py), which logs
+    # every statement WITH ITS BOUND PARAMETERS - including argon2 password_hash values on every
+    # registration - and makes Litestar return stack traces in responses. Never set True outside
+    # a throwaway local session.
     service_debug: bool = False
     log_level: str = "info"
 
