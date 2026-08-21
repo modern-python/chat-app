@@ -54,4 +54,6 @@ jobs:
           PYTHONDONTWRITEBYTECODE: 1
           PYTHONUNBUFFERED: 1
           DB_DSN: postgresql+asyncpg://postgres:password@127.0.0.1/postgres
-          JWT_SECRET: insecure-ci-secret
+          # Must match docker-compose.yml and stay >= 32 bytes: PyJWT warns below the
+          # HS256 minimum (RFC 7518 3.2), and filterwarnings = ["error"] makes that fatal.
+          JWT_SECRET: insecure-ci-secret-do-not-use-in-prod
