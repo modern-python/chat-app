@@ -24,7 +24,9 @@ from app.use_cases.create_message import CreateMessageUseCase
 from app.use_cases.delete_message import DeleteMessageUseCase
 from app.use_cases.edit_message import EditMessageUseCase
 from app.use_cases.fetch_chat import FetchChatUseCase
+from app.use_cases.fetch_chats import FetchChatsUseCase
 from app.use_cases.fetch_messages import FetchMessagesUseCase
+from app.use_cases.mark_read import MarkReadUseCase
 from app.use_cases.register_user import RegisterUserUseCase
 
 
@@ -53,6 +55,8 @@ def build_app() -> litestar.Litestar:
                 "fetch_messages_use_case": modern_di_litestar.FromDI(FetchMessagesUseCase),
                 "edit_message_use_case": modern_di_litestar.FromDI(EditMessageUseCase),
                 "delete_message_use_case": modern_di_litestar.FromDI(DeleteMessageUseCase),
+                "fetch_chats_use_case": modern_di_litestar.FromDI(FetchChatsUseCase),
+                "mark_read_use_case": modern_di_litestar.FromDI(MarkReadUseCase),
             },
             request_max_body_size=settings.request_max_body_size,
         ),

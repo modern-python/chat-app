@@ -9,6 +9,8 @@ from app.database import tables
 from app.schemas import api as schemas
 from app.use_cases.create_chat import CreateChatUseCase
 from app.use_cases.fetch_chat import FetchChatUseCase
+from app.use_cases.fetch_chats import FetchChatsUseCase
+from app.use_cases.mark_read import MarkReadUseCase
 
 
 @litestar.post("/chats/")
@@ -24,6 +26,27 @@ async def create_chat(
     )
 
 
+@litestar.get("/chats/")
+async def list_chats(
+    request: litestar.Request[tables.UsersTable, typing.Any, typing.Any],
+    fetch_chats_use_case: NamedDependency[FetchChatsUseCase],
+) -> schemas.Chats:
+    rows: typing.Final = await fetch_chats_use_case(request.user)
+    return schemas.Chats(
+        items=[
+            schemas.ChatListItem(
+                id=row.chat.id,
+                chat_type=row.chat.chat_type,
+                title=row.chat.title,
+                created_by_id=row.chat.created_by_id,
+                last_message=schemas.Message.model_validate(row.last_message) if row.last_message is not None else None,
+                unread_count=row.unread_count,
+            )
+            for row in rows
+        ]
+    )
+
+
 @litestar.get("/chats/{chat_id:int}/")
 async def get_chat(
     chat_id: FromPath[int],
@@ -34,4 +57,15 @@ async def get_chat(
     return schemas.ChatDetail.model_validate(chat)
 
 
-ROUTER: typing.Final = litestar.Router(path="/api", route_handlers=[create_chat, get_chat])
+@litestar.post("/chats/{chat_id:int}/read/", status_code=status_codes.HTTP_200_OK)
+async def mark_read(
+    chat_id: FromPath[int],
+    data: schemas.MarkReadRequest,
+    request: litestar.Request[tables.UsersTable, typing.Any, typing.Any],
+    mark_read_use_case: NamedDependency[MarkReadUseCase],
+) -> schemas.ChatMember:
+    member: typing.Final = await mark_read_use_case(request.user, chat_id, data)
+    return schemas.ChatMember.model_validate(member)
+
+
+ROUTER: typing.Final = litestar.Router(path="/api", route_handlers=[create_chat, list_chats, get_chat, mark_read])

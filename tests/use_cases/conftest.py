@@ -73,3 +73,17 @@ async def alice_message(
         alice, direct_chat.id, schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hello")
     )
     return message
+
+
+@pytest.fixture
+def send(
+    create_message_use_case: CreateMessageUseCase,
+) -> typing.Callable[[tables.UsersTable, int, str], typing.Awaitable[tuple[tables.MessagesTable, bool]]]:
+    """Send a message with a fresh idempotency key per call, so callers never collide on retries."""
+
+    async def _send(actor: tables.UsersTable, chat_id: int, text: str) -> tuple[tables.MessagesTable, bool]:
+        return await create_message_use_case(
+            actor, chat_id, schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text=text)
+        )
+
+    return _send

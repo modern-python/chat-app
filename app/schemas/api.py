@@ -49,6 +49,10 @@ class ChatMember(Base):
     last_read_message_id: PositiveInt | None = None
 
 
+class MarkReadRequest(Base):
+    last_read_message_id: PositiveInt
+
+
 class Chat(Base):
     id: PositiveInt
     chat_type: ChatType
@@ -79,4 +83,13 @@ class Message(Base):
 
 
 class Messages(Collection[Message]):
+    pass
+
+
+class ChatListItem(Chat):
+    last_message: Message | None = None
+    unread_count: int = 0
+
+
+class Chats(Collection[ChatListItem]):
     pass

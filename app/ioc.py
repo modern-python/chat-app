@@ -14,7 +14,9 @@ from app.use_cases.create_message import CreateMessageUseCase
 from app.use_cases.delete_message import DeleteMessageUseCase
 from app.use_cases.edit_message import EditMessageUseCase
 from app.use_cases.fetch_chat import FetchChatUseCase
+from app.use_cases.fetch_chats import FetchChatsUseCase
 from app.use_cases.fetch_messages import FetchMessagesUseCase
+from app.use_cases.mark_read import MarkReadUseCase
 from app.use_cases.register_user import RegisterUserUseCase
 
 
@@ -63,6 +65,8 @@ class UseCases(Group, scope=Scope.REQUEST):
     fetch_messages_use_case = providers.Factory(creator=FetchMessagesUseCase)
     edit_message_use_case = providers.Factory(creator=EditMessageUseCase)
     delete_message_use_case = providers.Factory(creator=DeleteMessageUseCase)
+    fetch_chats_use_case = providers.Factory(creator=FetchChatsUseCase)
+    mark_read_use_case = providers.Factory(creator=MarkReadUseCase)
 
 
 ALL_GROUPS: typing.Final[list[type[Group]]] = [Database, Repositories, UseCases]
