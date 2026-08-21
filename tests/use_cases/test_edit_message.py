@@ -28,6 +28,15 @@ async def test_other_member_cannot_edit(
         await edit_message_use_case(bob, alice_message.id, schemas.EditMessageRequest(text="nope"))
 
 
+async def test_non_member_cannot_edit(
+    edit_message_use_case: EditMessageUseCase, alice_message: tables.MessagesTable, carol: tables.UsersTable
+) -> None:
+    # carol isn't in direct_chat at all - the membership gate must refuse her before authorship
+    # is even considered.
+    with pytest.raises(PermissionDeniedError):
+        await edit_message_use_case(carol, alice_message.id, schemas.EditMessageRequest(text="nope"))
+
+
 async def test_editing_a_deleted_message_raises_conflict(
     edit_message_use_case: EditMessageUseCase,
     delete_message_use_case: DeleteMessageUseCase,
@@ -58,6 +67,14 @@ async def test_other_member_cannot_delete(
     # Same distinction as edit: bob is a member of the chat but not the author.
     with pytest.raises(PermissionDeniedError):
         await delete_message_use_case(bob, alice_message.id)
+
+
+async def test_non_member_cannot_delete(
+    delete_message_use_case: DeleteMessageUseCase, alice_message: tables.MessagesTable, carol: tables.UsersTable
+) -> None:
+    # Same distinction as edit: carol isn't in direct_chat at all.
+    with pytest.raises(PermissionDeniedError):
+        await delete_message_use_case(carol, alice_message.id)
 
 
 async def test_deleting_an_already_deleted_message_is_idempotent(
