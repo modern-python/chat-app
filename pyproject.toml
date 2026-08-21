@@ -81,4 +81,11 @@ exclude_also = ["if typing.TYPE_CHECKING:"]
 [tool.coverage.run]
 concurrency = ["thread", "greenlet"]
 disable_warnings = ["couldnt-parse"]
-omit = ["migrations/*", "app/api/__main__.py"]
+omit = [
+    "migrations/*",
+    "app/api/__main__.py",
+    # No __init__.py under planning/ (see the comment atop planning/index.py), so coverage's
+    # package walk never reaches this file on its own - omit it explicitly rather than relying
+    # on that as an accident of discovery.
+    "planning/index.py",
+]
