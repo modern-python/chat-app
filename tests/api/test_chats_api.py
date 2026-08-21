@@ -1,16 +1,7 @@
-import typing
-
 import pytest
 from httpx import AsyncClient
 
-
-async def _register(client: AsyncClient, username: str) -> int:
-    response = await client.post(
-        "/api/auth/register/",
-        json={"username": username, "password": "hunter2hunter2", "display_name": username.title()},
-    )
-    user_id: typing.Final = response.json()["id"]
-    return user_id
+from tests.api.helpers import register as _register
 
 
 @pytest.mark.usefixtures("db_session")

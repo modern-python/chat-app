@@ -1,39 +1,10 @@
-import typing
-import uuid
-
 import pytest
 from httpx import AsyncClient
 
-
-async def _register(client: AsyncClient, username: str) -> int:
-    response = await client.post(
-        "/api/auth/register/",
-        json={"username": username, "password": "hunter2hunter2", "display_name": username.title()},
-    )
-    user_id: typing.Final = response.json()["id"]
-    return user_id
-
-
-async def _login(client: AsyncClient, username: str) -> None:
-    await client.post("/api/auth/login/", json={"username": username, "password": "hunter2hunter2"})
-
-
-async def _create_direct_chat(client: AsyncClient) -> tuple[int, int]:
-    """Register bob then alice (alice ends up holding the cookie/actor) and open a direct chat."""
-    bob_id = await _register(client, "bob")
-    await _register(client, "alice")
-    chat_id: typing.Final = (
-        await client.post("/api/chats/", json={"chat_type": "direct", "member_ids": [bob_id]})
-    ).json()["id"]
-    return chat_id, bob_id
-
-
-async def _send(client: AsyncClient, chat_id: int, text: str) -> dict[str, typing.Any]:
-    response = await client.post(
-        f"/api/chats/{chat_id}/messages/",
-        json={"idempotency_key": str(uuid.uuid4()), "text": text},
-    )
-    return response.json()
+from tests.api.helpers import create_direct_chat as _create_direct_chat
+from tests.api.helpers import login as _login
+from tests.api.helpers import register as _register
+from tests.api.helpers import send as _send
 
 
 @pytest.mark.usefixtures("db_session")

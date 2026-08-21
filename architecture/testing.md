@@ -65,9 +65,11 @@ each other on retries.
 `httpx.ASGITransport` plus `asgi_lifespan.LifespanManager`, so these tests
 exercise the actual route handlers, middleware, and DI wiring — not a stub.
 `tests/api/*.py` drive it with plain `AsyncClient` calls and helper functions
-(`_register`, `_login`, `_create_direct_chat`) rather than fixtures, since the
-cookie-carrying `client` instance is itself the shared state across a test's
-sequence of requests.
+(`register`, `login`, `create_direct_chat`, `send`, shared from
+`tests/api/helpers.py` and imported with a leading-underscore alias per the
+local call-site convention) rather than fixtures, since the cookie-carrying
+`client` instance is itself the shared state across a test's sequence of
+requests.
 
 ## Simulating a DB race at the repository seam
 
