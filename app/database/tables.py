@@ -1,10 +1,11 @@
 import datetime
 import enum
 import typing
+import uuid
 
 import sqlalchemy as sa
 from advanced_alchemy.base import BigIntAuditBase, BigIntBase, orm_registry
-from advanced_alchemy.types import DateTimeUTC
+from advanced_alchemy.types import GUID, DateTimeUTC
 from sqlalchemy import orm
 
 
@@ -62,3 +63,18 @@ class ChatMembersTable(BigIntBase):
     joined_at: orm.Mapped[datetime.datetime] = orm.mapped_column(
         DateTimeUTC(timezone=True), default=lambda: datetime.datetime.now(tz=datetime.UTC)
     )
+
+
+class MessagesTable(BigIntBase):
+    __tablename__ = "messages"
+    __table_args__ = (sa.Index("ix_messages_chat_id_id", "chat_id", "id"),)
+
+    chat_id: orm.Mapped[int] = orm.mapped_column(sa.ForeignKey("chats.id"), index=True)
+    user_id: orm.Mapped[int | None] = orm.mapped_column(sa.ForeignKey("users.id"), nullable=True, index=True)
+    idempotency_key: orm.Mapped[uuid.UUID] = orm.mapped_column(GUID, unique=True)
+    text: orm.Mapped[str] = orm.mapped_column(sa.String)
+    created_at: orm.Mapped[datetime.datetime] = orm.mapped_column(
+        DateTimeUTC(timezone=True), default=lambda: datetime.datetime.now(tz=datetime.UTC)
+    )
+    edited_at: orm.Mapped[datetime.datetime | None] = orm.mapped_column(DateTimeUTC(timezone=True), nullable=True)
+    deleted_at: orm.Mapped[datetime.datetime | None] = orm.mapped_column(DateTimeUTC(timezone=True), nullable=True)

@@ -6,10 +6,13 @@ from modern_di import Group, Scope, providers
 from app.database import resources as database_resources
 from app.repositories.chat_members_repository import ChatMembersRepository
 from app.repositories.chats_repository import ChatsRepository
+from app.repositories.messages_repository import MessagesRepository
 from app.repositories.users_repository import UsersRepository
 from app.use_cases.authenticate_user import AuthenticateUserUseCase
 from app.use_cases.create_chat import CreateChatUseCase
+from app.use_cases.create_message import CreateMessageUseCase
 from app.use_cases.fetch_chat import FetchChatUseCase
+from app.use_cases.fetch_messages import FetchMessagesUseCase
 from app.use_cases.register_user import RegisterUserUseCase
 
 
@@ -43,6 +46,10 @@ class Repositories(Group, scope=Scope.REQUEST):
         creator=ChatMembersRepository,
         kwargs={"session": Database.database_session, "auto_commit": False},
     )
+    messages_repository = providers.Factory(
+        creator=MessagesRepository,
+        kwargs={"session": Database.database_session, "auto_commit": False},
+    )
 
 
 class UseCases(Group, scope=Scope.REQUEST):
@@ -50,6 +57,8 @@ class UseCases(Group, scope=Scope.REQUEST):
     authenticate_user_use_case = providers.Factory(creator=AuthenticateUserUseCase)
     create_chat_use_case = providers.Factory(creator=CreateChatUseCase)
     fetch_chat_use_case = providers.Factory(creator=FetchChatUseCase)
+    create_message_use_case = providers.Factory(creator=CreateMessageUseCase)
+    fetch_messages_use_case = providers.Factory(creator=FetchMessagesUseCase)
 
 
 ALL_GROUPS: typing.Final[list[type[Group]]] = [Database, Repositories, UseCases]

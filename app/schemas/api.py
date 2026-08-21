@@ -1,3 +1,5 @@
+import datetime
+import uuid
 from collections.abc import Iterable
 from typing import Any, Self
 
@@ -56,3 +58,21 @@ class Chat(Base):
 
 class ChatDetail(Chat):
     members: list[ChatMember]
+
+
+class SendMessageRequest(Base):
+    idempotency_key: uuid.UUID
+    text: str = pydantic.Field(min_length=1, max_length=4000)
+
+
+class Message(Base):
+    id: PositiveInt
+    chat_id: PositiveInt
+    user_id: PositiveInt | None = None
+    text: str
+    created_at: datetime.datetime
+    edited_at: datetime.datetime | None = None
+
+
+class Messages(Collection[Message]):
+    pass

@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import ioc, security
 from app.database import tables
+from app.schemas import api as schemas
+from app.use_cases.create_chat import CreateChatUseCase
 from tests.factories import UserFactory
 
 
@@ -49,3 +51,13 @@ async def bob(db_session: AsyncSession) -> tables.UsersTable:
 @pytest.fixture
 async def carol(db_session: AsyncSession) -> tables.UsersTable:
     return await _make_user(db_session, "carol")
+
+
+@pytest.fixture
+async def direct_chat(
+    create_chat_use_case: CreateChatUseCase, alice: tables.UsersTable, bob: tables.UsersTable
+) -> tables.ChatsTable:
+    chat, _ = await create_chat_use_case(
+        alice, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id])
+    )
+    return chat
