@@ -43,11 +43,7 @@ class CreateMessageUseCase:
                     )
                 )
             except DuplicateKeyError:
-                # Two concurrent retries of the same (chat_id, key); the loser reads the winner's
-                # row. Roll back and re-read outside this block (Transaction.__aexit__
-                # unconditionally rolls back and closes the session on an open, uncommitted
-                # transaction, which expires every loaded attribute - a `return` from in here
-                # would detach whatever fetch_by_idempotency_key loaded).
+                # Re-read outside the block: __aexit__ rolls back and detaches on an open transaction.
                 await self.transaction.rollback()
             else:
                 await self.chats_repository.update(

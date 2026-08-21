@@ -28,20 +28,13 @@ class DeleteMessageUseCase:
                 action="delete",
             )
             if message.deleted_at is not None:
-                # DELETE is idempotent under HTTP semantics: a second delete of an
-                # already-deleted message is not an error, unlike PATCH via EditMessageUseCase.
+                # DELETE is idempotent; a second delete is not an error, unlike an edit.
                 return
             message.deleted_at = datetime.datetime.now(tz=datetime.UTC)
             await self.messages_repository.update(message, item_id=message_id)
 
             chat = await self.chats_repository.get_one(id=message.chat_id)
             if chat.last_message_id == message_id:
-                # chats.last_message_id means "the newest non-deleted message in this chat" - the
-                # chat listing's preview and its ordering both read this column, so repointing it
-                # here (in the same commit as the soft delete) is what keeps a delete from being
-                # only half-effective: leaving it pointed at a deleted message would make the
-                # listing preview show deleted text and rank the chat by a message that no longer
-                # counts.
                 newest = await self.messages_repository.fetch_latest_active(message.chat_id)
                 await self.chats_repository.update(
                     tables.ChatsTable(id=message.chat_id, last_message_id=newest.id if newest is not None else None),

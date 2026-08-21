@@ -23,9 +23,7 @@ async def request_container(
         yield container
 
 
-# One pytest fixture per provider on both groups, named after the class attribute.
-# Every use case and repository added in later tasks becomes a fixture automatically,
-# so no test file has to hand-assemble dependencies.
+# Declares one same-named pytest fixture per provider on both groups.
 expose(ioc.Repositories, ioc.UseCases, container_fixture="request_container")
 
 

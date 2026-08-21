@@ -26,7 +26,6 @@ async def test_author_can_edit(
 async def test_other_member_cannot_edit(
     edit_message_use_case: EditMessageUseCase, alice_message: tables.MessagesTable, bob: tables.UsersTable
 ) -> None:
-    # bob is a member of the chat, not the author - membership alone must not authorize the edit.
     with pytest.raises(PermissionDeniedError):
         await edit_message_use_case(
             actor=bob, message_id=alice_message.id, data=schemas.EditMessageRequest(text="nope")
@@ -46,9 +45,6 @@ async def test_author_without_membership_cannot_edit(
     alice_message: tables.MessagesTable,
     alice: tables.UsersTable,
 ) -> None:
-    # alice is still the message's author but no longer a member of its chat (e.g. removed) -
-    # the one state where authorship and membership disagree, and the only state that can prove
-    # the membership check does anything the authorship check doesn't already cover.
     await _remove_alice_from_chat(chat_members_repository, alice_message, alice)
     with pytest.raises(PermissionDeniedError):
         await edit_message_use_case(
@@ -59,8 +55,6 @@ async def test_author_without_membership_cannot_edit(
 async def test_non_member_cannot_edit(
     edit_message_use_case: EditMessageUseCase, alice_message: tables.MessagesTable, carol: tables.UsersTable
 ) -> None:
-    # carol isn't in direct_chat at all - the membership gate must refuse her before authorship
-    # is even considered.
     with pytest.raises(PermissionDeniedError):
         await edit_message_use_case(
             actor=carol, message_id=alice_message.id, data=schemas.EditMessageRequest(text="nope")
@@ -73,8 +67,6 @@ async def test_editing_a_deleted_message_raises_conflict(
     alice_message: tables.MessagesTable,
     alice: tables.UsersTable,
 ) -> None:
-    # The author is authorized; the request conflicts with the message's current state, so this
-    # is a 409-shaped ConflictError, not a 403-shaped PermissionDeniedError.
     await delete_message_use_case(actor=alice, message_id=alice_message.id)
     with pytest.raises(ConflictError):
         await edit_message_use_case(
@@ -96,7 +88,6 @@ async def test_author_can_delete(
 async def test_other_member_cannot_delete(
     delete_message_use_case: DeleteMessageUseCase, alice_message: tables.MessagesTable, bob: tables.UsersTable
 ) -> None:
-    # Same distinction as edit: bob is a member of the chat but not the author.
     with pytest.raises(PermissionDeniedError):
         await delete_message_use_case(actor=bob, message_id=alice_message.id)
 
@@ -107,7 +98,6 @@ async def test_author_without_membership_cannot_delete(
     alice_message: tables.MessagesTable,
     alice: tables.UsersTable,
 ) -> None:
-    # Same distinction as edit.
     await _remove_alice_from_chat(chat_members_repository, alice_message, alice)
     with pytest.raises(PermissionDeniedError):
         await delete_message_use_case(actor=alice, message_id=alice_message.id)
@@ -116,7 +106,6 @@ async def test_author_without_membership_cannot_delete(
 async def test_non_member_cannot_delete(
     delete_message_use_case: DeleteMessageUseCase, alice_message: tables.MessagesTable, carol: tables.UsersTable
 ) -> None:
-    # Same distinction as edit: carol isn't in direct_chat at all.
     with pytest.raises(PermissionDeniedError):
         await delete_message_use_case(actor=carol, message_id=alice_message.id)
 
@@ -143,8 +132,6 @@ async def test_deleted_message_disappears_from_listing(
     alice_message: tables.MessagesTable,
     alice: tables.UsersTable,
 ) -> None:
-    # A second, undeleted message proves the listing filters *deleted* messages specifically -
-    # an empty result here would prove nothing, since the chat would just be empty either way.
     other, _ = await create_message_use_case(
         actor=alice,
         chat_id=alice_message.chat_id,

@@ -49,10 +49,7 @@ class ChatsRepository(SQLAlchemyAsyncRepositoryService[tables.ChatsTable]):
             .join(tables.ChatMembersTable, tables.ChatMembersTable.chat_id == tables.ChatsTable.id)
             .where(tables.ChatMembersTable.user_id == user_id)
             .order_by(sa.func.coalesce(tables.ChatsTable.last_message_id, 0).desc())
-            # Sessions run expire_on_commit=False, so a ChatsTable already in the identity map
-            # keeps whatever unread_count/last_message it was loaded with; without this, a second
-            # listing in the same session would hand back the first one's values. Safe here only
-            # because this query is read-only - populate_existing overwrites in-memory state.
+            # expire_on_commit=False would otherwise leave identity-mapped chats holding stale values.
             .execution_options(populate_existing=True)
         )
         result: typing.Final = await self.repository.session.execute(statement)

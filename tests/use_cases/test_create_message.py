@@ -115,8 +115,6 @@ async def test_concurrent_duplicate_key_recovers_the_winners_message(
     assert winner_created is True
     winner_id = winner.id
 
-    # Shares the winner's session/transaction so the committed row is visible to the recovery
-    # re-read, same setup as CreateChatUseCase's equivalent race test.
     racer = CreateMessageUseCase(
         transaction=create_message_use_case.transaction,
         chats_repository=create_message_use_case.chats_repository,
@@ -159,9 +157,6 @@ async def test_same_idempotency_key_in_two_different_chats_creates_two_messages(
     alice: tables.UsersTable,
     carol: tables.UsersTable,
 ) -> None:
-    # Idempotency is scoped per (chat_id, idempotency_key): the key identifies a retry of
-    # "send to this chat", not a retry across the whole table, so reusing it in a different
-    # chat is a second, independent send.
     other_chat, _ = await create_chat_use_case(
         actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[carol.id])
     )

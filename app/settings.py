@@ -13,10 +13,6 @@ class Settings(pydantic_settings.BaseSettings):
     service_name: str = "chat-app"
     service_version: str = "1.0.0"
     service_environment: str = "local"
-    # Enabling this turns on SQLAlchemy's echo/echo_pool (app/database/resources.py), which logs
-    # every statement WITH ITS BOUND PARAMETERS - including argon2 password_hash values on every
-    # registration - and makes Litestar return stack traces in responses. Never set True outside
-    # a throwaway local session.
     service_debug: bool = False
     log_level: str = "info"
 
@@ -30,8 +26,7 @@ class Settings(pydantic_settings.BaseSettings):
 
     jwt_secret: str = INSECURE_JWT_SECRET
     jwt_lifetime_seconds: int = 60 * 60 * 24 * 7
-    # Litestar leaves this unset by default. Production MUST set this to True (it requires
-    # serving over HTTPS); left False here so local http:// development still gets the cookie.
+    # False so local http:// development still gets the cookie; production must set True.
     jwt_cookie_secure: bool = False
 
     opentelemetry_endpoint: str = ""
@@ -47,8 +42,6 @@ class Settings(pydantic_settings.BaseSettings):
     request_max_body_size: int = 1024 * 1024
 
     def ensure_jwt_secret_is_configured(self) -> None:
-        # The whole auth boundary is a token signed with jwt_secret: with the shipped default,
-        # anyone can forge a token for any user.id. Only "local" may run with it.
         if self.service_environment != "local" and self.jwt_secret == INSECURE_JWT_SECRET:
             message = (
                 f"jwt_secret is still the insecure default while service_environment="

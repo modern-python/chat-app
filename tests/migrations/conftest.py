@@ -8,8 +8,7 @@ from app.settings import settings
 
 @pytest.fixture
 def alembic_engine() -> typing.Iterator[Engine]:
-    # Overrides pytest-alembic's default in-memory SQLite engine: these tests are only
-    # meaningful against the Postgres the migrations actually target.
+    # Replaces pytest-alembic's default in-memory SQLite engine.
     engine: typing.Final = create_engine(settings.sync_db_dsn_parsed)
     yield engine
     engine.dispose()

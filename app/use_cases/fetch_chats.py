@@ -13,7 +13,4 @@ class FetchChatsUseCase:
 
     @postgres_retry
     async def __call__(self, *, actor: tables.UsersTable) -> Sequence[tables.ChatsTable]:
-        # Each returned chat already carries its unread_count and last_message: the count comes
-        # from a correlated subquery on the same statement and the preview from one selectinload,
-        # so this is two round trips for the whole list regardless of how many chats it holds.
         return await self.chats_repository.list_for_user(actor.id)

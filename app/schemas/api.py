@@ -87,8 +87,6 @@ class Messages(Collection[Message]):
 
 
 class ChatListItem(Chat):
-    # ChatsTable maps unread_count and last_message itself (see app/database/tables.py), so a
-    # listed chat validates straight through from_attributes like any other ORM instance.
     last_message: Message | None = None
     unread_count: int = 0
 

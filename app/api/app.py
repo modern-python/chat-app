@@ -35,10 +35,6 @@ def build_app() -> litestar.Litestar:
                 ConflictError: exception_handlers.conflict_error_handler,
             },
             route_handlers=[auth_endpoints.ROUTER, chats_endpoints.ROUTER, messages_endpoints.ROUTER],
-            # autowired_groups exposes one Litestar dependency per UseCases provider, named
-            # after the provider attribute - which is what every handler parameter is already
-            # called. Database and Repositories are deliberately left out: route handlers have
-            # no business resolving a session, a transaction or a repository directly.
             plugins=[
                 modern_di_litestar.ModernDIPlugin(di_container, autowired_groups=[ioc.UseCases]),
                 JWTCookieAuthPlugin(),
@@ -47,8 +43,7 @@ def build_app() -> litestar.Litestar:
         ),
         opentelemetry_instrumentors=[
             SQLAlchemyInstrumentor(),
-            # False: bound query parameters include argon2 password hashes (every registration
-            # INSERTs one) - capturing them would ship credential material to the OTel collector.
+            # True would ship argon2 password hashes, bound as INSERT parameters, to the collector.
             AsyncPGInstrumentor(capture_parameters=False),
         ],
     )

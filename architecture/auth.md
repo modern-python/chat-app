@@ -16,6 +16,14 @@ inside its own transaction and returns `201` with the cookie set via
 the unique constraint on `users.username`, mapped to `409` by the app-wide
 handler — there is no auth-specific duplicate check.
 
+Two settings exist to keep those hashes out of telemetry. `service_debug`
+(`app/settings.py`) turns on SQLAlchemy's `echo`/`echo_pool`, which log every
+statement *with its bound parameters* — including the `password_hash` on every
+registration — and additionally make Litestar return stack traces in responses;
+it must stay `False` outside a throwaway local session. `AsyncPGInstrumentor` is
+constructed `capture_parameters=False` (`app/api/app.py`) for the same reason on
+the OpenTelemetry side.
+
 `POST /api/auth/login/` runs `AuthenticateUserUseCase`, which looks the user up
 by username and verifies the password hash. On failure — unknown username or
 wrong password — it raises Litestar's own `NotAuthorizedException` (`401`),
