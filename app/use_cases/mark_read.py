@@ -41,6 +41,5 @@ class MarkReadUseCase:
             await self.transaction.commit()
             # Returned from inside the block, right after commit(): __aexit__ then sees no open
             # transaction (commit ended it) and only closes the session - it does not roll back,
-            # so `updated`'s already-loaded attributes stay usable for the caller. Same strategy
-            # as Task 5's EditMessageUseCase.
+            # so `updated`'s already-loaded attributes stay usable for the caller.
             return updated

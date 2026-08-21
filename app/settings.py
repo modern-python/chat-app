@@ -47,8 +47,8 @@ class Settings(pydantic_settings.BaseSettings):
     request_max_body_size: int = 1024 * 1024
 
     def ensure_jwt_secret_is_configured(self) -> None:
-        # The whole auth boundary (Task 3) is a token signed with jwt_secret: with the shipped
-        # default, anyone can forge a token for any user.id. Only "local" may run with it.
+        # The whole auth boundary is a token signed with jwt_secret: with the shipped default,
+        # anyone can forge a token for any user.id. Only "local" may run with it.
         if self.service_environment != "local" and self.jwt_secret == INSECURE_JWT_SECRET:
             message = (
                 f"jwt_secret is still the insecure default while service_environment="
