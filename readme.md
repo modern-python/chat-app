@@ -12,9 +12,9 @@
 
 Reference chat application for the `modern-python` organisation: a
 single-package Litestar service — JWT cookie auth, direct and group chats,
-idempotent message send, cursor-paginated history, read receipts — built to
-show the org's libraries composed on a domain more realistic than a two-table
-CRUD template.
+idempotent message send, cursor-paginated history, per-member read markers
+and unread counts — built to show the org's libraries composed on a domain
+more realistic than a two-table CRUD template.
 
 ## Key Features
 
