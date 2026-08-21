@@ -16,8 +16,8 @@ class MessagesRepository(SQLAlchemyAsyncRepositoryService[tables.MessagesTable])
 
     repository_type = BaseRepository
 
-    async def fetch_by_idempotency_key(self, idempotency_key: uuid.UUID) -> tables.MessagesTable | None:
-        return await self.get_one_or_none(idempotency_key=idempotency_key)
+    async def fetch_by_idempotency_key(self, chat_id: int, idempotency_key: uuid.UUID) -> tables.MessagesTable | None:
+        return await self.get_one_or_none(chat_id=chat_id, idempotency_key=idempotency_key)
 
     async def list_page(
         self,

@@ -34,6 +34,9 @@ class FetchMessagesUseCase:
         if before_id is not None and after_id is not None:
             msg = "before_id and after_id are mutually exclusive"
             raise ValidationError(msg)
+        if limit < 1:
+            msg = "limit must be at least 1"
+            raise ValidationError(msg)
         return await self.messages_repository.list_page(
             chat_id, before_id=before_id, after_id=after_id, limit=min(limit, MAX_PAGE_SIZE)
         )

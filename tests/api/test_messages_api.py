@@ -120,3 +120,13 @@ async def test_limit_above_max_page_size_is_clamped(client: AsyncClient) -> None
 
     assert response.status_code == 200
     assert len(response.json()["items"]) == MAX_PAGE_SIZE
+
+
+@pytest.mark.usefixtures("db_session")
+async def test_negative_limit_is_rejected(client: AsyncClient) -> None:
+    chat_id, _ = await _create_direct_chat(client)
+    await _send(client, chat_id, "one")
+
+    response = await client.get(f"/api/chats/{chat_id}/messages/", params={"limit": -1})
+
+    assert response.status_code == 400

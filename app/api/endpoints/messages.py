@@ -26,10 +26,11 @@ async def send_message(
 
 
 @litestar.get("/chats/{chat_id:int}/messages/")
-async def list_messages(  # noqa: PLR0913, PLR0917 - each is a distinct Litestar-bound path/query/DI param
+async def list_messages(  # noqa: PLR0913 - each is a distinct Litestar-bound path/query/DI param
     chat_id: FromPath[int],
     request: litestar.Request[tables.UsersTable, typing.Any, typing.Any],
     fetch_messages_use_case: NamedDependency[FetchMessagesUseCase],
+    *,
     before_id: FromQuery[int | None] = None,
     after_id: FromQuery[int | None] = None,
     limit: FromQuery[int] = 50,

@@ -69,7 +69,9 @@ class MessagesTable(BigIntBase):
     __tablename__ = "messages"
     __table_args__ = (sa.Index("ix_messages_chat_id_id", "chat_id", "id"),)
 
-    chat_id: orm.Mapped[int] = orm.mapped_column(sa.ForeignKey("chats.id"), index=True)
+    # No standalone index on chat_id: the (chat_id, id) composite index below already serves
+    # every query that would use one.
+    chat_id: orm.Mapped[int] = orm.mapped_column(sa.ForeignKey("chats.id"))
     user_id: orm.Mapped[int | None] = orm.mapped_column(sa.ForeignKey("users.id"), nullable=True, index=True)
     idempotency_key: orm.Mapped[uuid.UUID] = orm.mapped_column(GUID, unique=True)
     text: orm.Mapped[str] = orm.mapped_column(sa.String)

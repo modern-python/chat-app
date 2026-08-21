@@ -4,10 +4,11 @@ import pytest
 from advanced_alchemy.exceptions import DuplicateKeyError
 
 from app.database import tables
-from app.exceptions import PermissionDeniedError
+from app.exceptions import PermissionDeniedError, ValidationError
 from app.repositories.chats_repository import ChatsRepository
 from app.repositories.messages_repository import MessagesRepository
 from app.schemas import api as schemas
+from app.use_cases.create_chat import CreateChatUseCase
 from app.use_cases.create_message import CreateMessageUseCase
 
 
@@ -21,11 +22,11 @@ class _RacingMessagesRepository(MessagesRepository):
 
     _missed_precheck: bool = False
 
-    async def fetch_by_idempotency_key(self, idempotency_key: uuid.UUID) -> tables.MessagesTable | None:
+    async def fetch_by_idempotency_key(self, chat_id: int, idempotency_key: uuid.UUID) -> tables.MessagesTable | None:
         if not self._missed_precheck:
             self._missed_precheck = True
             return None
-        return await super().fetch_by_idempotency_key(idempotency_key)
+        return await super().fetch_by_idempotency_key(chat_id, idempotency_key)
 
     async def create(self, *_args: object, **_kwargs: object) -> tables.MessagesTable:
         msg = "simulated race: another request already sent this message"
@@ -105,3 +106,24 @@ async def test_concurrent_duplicate_key_recovers_the_winners_message(
     )
     assert loser_created is False
     assert loser.id == winner_id
+    assert loser.text == "hi"
+
+
+async def test_reusing_an_idempotency_key_in_a_different_chat_is_rejected(
+    create_message_use_case: CreateMessageUseCase,
+    create_chat_use_case: CreateChatUseCase,
+    direct_chat: tables.ChatsTable,
+    alice: tables.UsersTable,
+    carol: tables.UsersTable,
+) -> None:
+    # idempotency_key is unique table-wide, not per chat: reusing one across two different
+    # chats is a deterministic client error (not a race), and must not silently hand back the
+    # other chat's message.
+    other_chat, _ = await create_chat_use_case(
+        alice, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[carol.id])
+    )
+    key = uuid.uuid4()
+    await create_message_use_case(alice, direct_chat.id, schemas.SendMessageRequest(idempotency_key=key, text="hi"))
+
+    with pytest.raises(ValidationError):
+        await create_message_use_case(alice, other_chat.id, schemas.SendMessageRequest(idempotency_key=key, text="hi"))

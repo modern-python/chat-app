@@ -5,7 +5,7 @@ from advanced_alchemy.exceptions import DuplicateKeyError
 from db_retry import Transaction, postgres_retry
 
 from app.database import tables
-from app.exceptions import PermissionDeniedError
+from app.exceptions import PermissionDeniedError, ValidationError
 from app.repositories.chat_members_repository import ChatMembersRepository
 from app.repositories.chats_repository import ChatsRepository
 from app.repositories.messages_repository import MessagesRepository
@@ -27,7 +27,7 @@ class CreateMessageUseCase:
             msg = "Not a member of this chat"
             raise PermissionDeniedError(msg)
 
-        existing: typing.Final = await self.messages_repository.fetch_by_idempotency_key(data.idempotency_key)
+        existing: typing.Final = await self.messages_repository.fetch_by_idempotency_key(chat_id, data.idempotency_key)
         if existing is not None:
             return existing, False
 
@@ -43,11 +43,13 @@ class CreateMessageUseCase:
                     )
                 )
             except DuplicateKeyError:
-                # Two concurrent retries of the same send; the loser reads the winner's row.
-                # Roll back and re-read outside this block (Transaction.__aexit__ unconditionally
-                # rolls back and closes the session on an open, uncommitted transaction, which
-                # expires every loaded attribute - a `return` from in here would detach whatever
-                # fetch_by_idempotency_key loaded).
+                # idempotency_key is globally unique, so this is either two concurrent retries of
+                # the same (chat_id, key) - the loser reads the winner's row below - or the client
+                # reused a key that already belongs to a message in a different chat. Roll back and
+                # re-read outside this block (Transaction.__aexit__ unconditionally rolls back and
+                # closes the session on an open, uncommitted transaction, which expires every loaded
+                # attribute - a `return` from in here would detach whatever fetch_by_idempotency_key
+                # loaded).
                 await self.transaction.rollback()
             else:
                 await self.chats_repository.update(
@@ -58,10 +60,14 @@ class CreateMessageUseCase:
                 await self.transaction.commit()
 
         if message is None:
-            duplicate = await self.messages_repository.fetch_by_idempotency_key(data.idempotency_key)
-            if duplicate is None:  # pragma: no cover - defensive: the unique constraint guarantees a match here
-                msg = "Message send raced but the resulting row could not be found"
-                raise RuntimeError(msg)
+            duplicate = await self.messages_repository.fetch_by_idempotency_key(chat_id, data.idempotency_key)
+            if duplicate is None:
+                # idempotency_key is unique across the whole table (not just this chat), so a
+                # DuplicateKeyError whose row isn't found under this chat_id means the key was
+                # already used for a message in a *different* chat - a genuine, deterministically
+                # reproducible client error, not a race.
+                msg = "idempotency_key is already in use for a different chat"
+                raise ValidationError(msg)
             return duplicate, False
 
-        return await self.messages_repository.get_one(id=message.id), True
+        return message, True
