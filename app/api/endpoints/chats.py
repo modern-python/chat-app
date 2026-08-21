@@ -3,6 +3,7 @@ import typing
 import litestar
 from litestar import status_codes
 from litestar.di import NamedDependency
+from litestar.openapi.datastructures import ResponseSpec
 from litestar.params import FromPath
 
 from app.database import tables
@@ -13,7 +14,14 @@ from app.use_cases.fetch_chats import FetchChatsUseCase
 from app.use_cases.mark_read import MarkReadUseCase
 
 
-@litestar.post("/chats/")
+@litestar.post(
+    "/chats/",
+    responses={
+        status_codes.HTTP_200_OK: ResponseSpec(
+            data_container=schemas.ChatDetail, description="An existing direct chat for this pair of members"
+        ),
+    },
+)
 async def create_chat(
     data: schemas.CreateChatRequest,
     request: litestar.Request[tables.UsersTable, typing.Any, typing.Any],

@@ -26,7 +26,7 @@ async def register(
     )
 
 
-@litestar.post("/auth/login/", exclude_from_auth=True)
+@litestar.post("/auth/login/", status_code=status_codes.HTTP_200_OK, exclude_from_auth=True)
 async def login(
     data: schemas.LoginRequest,
     authenticate_user_use_case: NamedDependency[AuthenticateUserUseCase],

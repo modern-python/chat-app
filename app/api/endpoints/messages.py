@@ -3,6 +3,7 @@ import typing
 import litestar
 from litestar import status_codes
 from litestar.di import NamedDependency
+from litestar.openapi.datastructures import ResponseSpec
 from litestar.params import FromPath, FromQuery
 
 from app.database import tables
@@ -13,7 +14,14 @@ from app.use_cases.edit_message import EditMessageUseCase
 from app.use_cases.fetch_messages import FetchMessagesUseCase
 
 
-@litestar.post("/chats/{chat_id:int}/messages/")
+@litestar.post(
+    "/chats/{chat_id:int}/messages/",
+    responses={
+        status_codes.HTTP_200_OK: ResponseSpec(
+            data_container=schemas.Message, description="A message already sent with this idempotency key"
+        ),
+    },
+)
 async def send_message(
     chat_id: FromPath[int],
     data: schemas.SendMessageRequest,
