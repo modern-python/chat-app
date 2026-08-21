@@ -38,13 +38,6 @@ def upgrade() -> None:
     op.create_index("ix_messages_chat_id_id", "messages", ["chat_id", "id"], unique=False)
     op.create_index(op.f("ix_messages_user_id"), "messages", ["user_id"], unique=False)
     # ### end Alembic commands ###
-    # NOTE: autogenerate also proposed `op.drop_constraint(op.f('ck_chats_chattype'), 'chats', type_='check')`
-    # here. That's a known Alembic false positive for `sa.Enum(native_enum=False, create_constraint=True)`
-    # columns: Postgres reflects the CHECK constraint body back as `chat_type::text = ANY (ARRAY[...])`,
-    # which never textually matches what Alembic renders from the model, so every autogenerate run
-    # "detects" this same constraint as removed even though nothing about `chats.chat_type` changed.
-    # Dropping it here would be unrelated to this migration's purpose (adding `messages`) and would
-    # silently remove enum validation from `chats.chat_type`, so it is intentionally omitted.
 
 
 def downgrade() -> None:

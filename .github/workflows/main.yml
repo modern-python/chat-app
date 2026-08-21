@@ -49,6 +49,8 @@ jobs:
           uv sync --all-extras --all-groups --no-install-project
           uv run alembic upgrade head
           uv run pytest .
+          uv run alembic downgrade base
+          uv run pytest tests/migrations --override-ini=addopts=
         env:
           SERVICE_ENVIRONMENT: ci
           PYTHONDONTWRITEBYTECODE: 1

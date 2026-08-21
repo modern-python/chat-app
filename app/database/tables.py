@@ -43,8 +43,7 @@ class ChatsTable(BigIntAuditBase):
     chat_type: orm.Mapped[ChatType] = orm.mapped_column(
         sa.Enum(
             ChatType,
-            native_enum=False,
-            create_constraint=True,
+            name="chattype",
             values_callable=lambda enum_cls: [member.value for member in enum_cls],
         )
     )

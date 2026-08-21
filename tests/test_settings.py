@@ -9,6 +9,12 @@ def test_db_dsn_parsed_exposes_driver() -> None:
     assert settings.db_dsn_parsed.database == "dbname"
 
 
+def test_sync_db_dsn_parsed_drops_the_async_driver() -> None:
+    settings = Settings(db_dsn="postgresql+asyncpg://user:pw@host/dbname")
+    assert settings.sync_db_dsn_parsed.drivername == "postgresql"
+    assert settings.sync_db_dsn_parsed.database == "dbname"
+
+
 def test_api_bootstrapper_config_carries_service_identity() -> None:
     settings = Settings(service_name="svc", service_version="9.9.9")
     config = settings.api_bootstrapper_config
