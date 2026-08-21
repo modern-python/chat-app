@@ -46,6 +46,18 @@ on the host). Inside the container, raw commands look like `uv run pytest
 - `just test` cycles the DB (downgrade to `base`, upgrade to `head`) before
   pytest and tears the stack down before and after. Pass pytest args through,
   e.g. `just test tests/use_cases/test_create_chat.py -k race -x`.
+- `just test-migrations` runs the `pytest-alembic` suite (`tests/migrations/`):
+  single head, upgrade, per-revision up/down consistency, and
+  model-definitions-match-DDL — the last being `alembic check` as a test. That
+  directory is excluded from `just test` (`--ignore` in `addopts`, and from
+  `coverage`'s `omit`) because it cycles the schema out from under the
+  transaction-rollback fixture, so it needs the `--override-ini=addopts=` the
+  recipe passes. CI runs both.
+- Enum columns are native Postgres enums, and `alembic-postgresql-enum` is
+  imported by `migrations/env.py` for its autogenerate hooks — that is what
+  renders `CREATE TYPE` / `ALTER TYPE ... ADD VALUE` / `op.sync_enum_values`
+  instead of silently missing them. Add or rename an enum value and
+  `just migration` writes the type change for you.
 - `just migration "message"` takes a **single positional argument** — not a
   `-m` flag — quoted so a multi-word message survives as one token (the
   recipe shell-quotes it with `quote()` before handing it to `alembic

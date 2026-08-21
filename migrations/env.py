@@ -1,14 +1,16 @@
 from logging.config import fileConfig
 
+import alembic_postgresql_enum
 from alembic import context
-from sqlalchemy import URL, create_engine
+from sqlalchemy import create_engine
 
 from app.database.tables import METADATA
 from app.settings import settings
 
 
-def get_dsn() -> URL:
-    return settings.db_dsn_parsed.set(drivername="postgresql")
+# Imported for its side effect: registering the autogenerate hooks that render CREATE TYPE /
+# ALTER TYPE ... ADD VALUE for native Postgres enums.
+_ = alembic_postgresql_enum
 
 
 config = context.config
@@ -21,7 +23,7 @@ target_metadata = METADATA
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=get_dsn(),
+        url=settings.sync_db_dsn_parsed,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -31,7 +33,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    connectable = create_engine(get_dsn())
+    connectable = create_engine(settings.sync_db_dsn_parsed)
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():
