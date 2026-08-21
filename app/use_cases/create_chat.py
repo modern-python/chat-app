@@ -1,10 +1,11 @@
 import dataclasses
 import typing
 
+from advanced_alchemy.exceptions import DuplicateKeyError
 from db_retry import Transaction, postgres_retry
 
 from app.database import tables
-from app.exceptions import PermissionDeniedError
+from app.exceptions import ValidationError
 from app.repositories.chat_members_repository import ChatMembersRepository
 from app.repositories.chats_repository import ChatsRepository
 from app.schemas.api import CreateChatRequest
@@ -20,39 +21,65 @@ class CreateChatUseCase:
     chat_members_repository: ChatMembersRepository
 
     @postgres_retry
-    async def __call__(self, actor: tables.UsersTable, data: CreateChatRequest) -> tables.ChatsTable:
+    async def __call__(self, actor: tables.UsersTable, data: CreateChatRequest) -> tuple[tables.ChatsTable, bool]:
         member_ids: typing.Final = {actor.id, *data.member_ids}
         direct_key: str | None = None
 
         if data.chat_type is tables.ChatType.DIRECT:
             if len(member_ids) != _DIRECT_CHAT_MEMBER_COUNT:
                 msg = "A direct chat must have exactly two distinct members"
-                raise PermissionDeniedError(msg)
-            direct_key = tables.build_direct_key(*sorted(member_ids))
+                raise ValidationError(msg)
+            low, high = sorted(member_ids)
+            direct_key = tables.build_direct_key(low, high)
 
-            # Read-only lookup kept outside the transaction: Transaction.__aexit__ rolls back
-            # whenever no commit happened, and AsyncSession.rollback() expires every loaded
-            # attribute (independent of expire_on_commit), which would detach `existing` from
-            # its session and break attribute access (e.g. `.members`) after this returns.
+            # Kept outside the `async with` block below: Transaction.__aexit__ unconditionally
+            # rolls back and closes the session whenever it is left with an open, uncommitted
+            # transaction (session.in_transaction() True with no prior commit()), which expires
+            # and detaches every loaded attribute. A `return` from inside the block after this
+            # read - with no commit following it - would trigger exactly that on `existing`.
+            # (For direct chats specifically, this SELECT autobegins the session's transaction,
+            # so the `async with self.transaction:` block below actually *joins* that same
+            # transaction rather than starting a new one - see Transaction.__aenter__. That does
+            # not change the __aexit__ hazard above; it only means direct and group chats reach
+            # the block by different routes.)
             existing = await self.chats_repository.fetch_direct_by_key(direct_key)
             if existing is not None:
-                return existing
+                return existing, False
 
+        chat: tables.ChatsTable | None = None
         async with self.transaction:
-            chat = await self.chats_repository.create(
-                tables.ChatsTable(
-                    chat_type=data.chat_type,
-                    title=data.title if data.chat_type is tables.ChatType.GROUP else None,
-                    created_by_id=actor.id,
-                    direct_key=direct_key,
+            try:
+                chat = await self.chats_repository.create(
+                    tables.ChatsTable(
+                        chat_type=data.chat_type,
+                        title=data.title if data.chat_type is tables.ChatType.GROUP else None,
+                        created_by_id=actor.id,
+                        direct_key=direct_key,
+                    )
                 )
-            )
-            for user_id in sorted(member_ids):
-                await self.chat_members_repository.create(tables.ChatMembersTable(chat_id=chat.id, user_id=user_id))
-            await self.transaction.commit()
+            except DuplicateKeyError:  # pragma: no cover - see comment below
+                # Two concurrent requests to open the same direct chat both passed the
+                # fetch_direct_by_key pre-check above and both tried to insert; the loser hits
+                # uq_chats_direct_key here. Roll back and re-read the winner's row outside this
+                # block (same __aexit__ hazard as the comment above). This branch is exercised by
+                # design reasoning and the DuplicateKeyError -> retry-read contract, not by the
+                # test suite: a single shared connection/session fixture cannot express two
+                # concurrent writers, so the race itself is unproven by `just test`.
+                await self.transaction.rollback()  # pragma: no cover
+            else:
+                for user_id in sorted(member_ids):
+                    await self.chat_members_repository.create(tables.ChatMembersTable(chat_id=chat.id, user_id=user_id))
+                await self.transaction.commit()
 
-        # Kept outside the transaction for the same reason as the lookup above: querying
-        # inside `async with self.transaction` after commit() would autobegin a fresh,
-        # uncommitted read that __aexit__ then rolls back and closes the session on,
-        # detaching the freshly loaded `members` relationship before the caller sees it.
-        return await self.chats_repository.fetch_with_members(chat.id)
+        if chat is None:  # pragma: no cover - see the DuplicateKeyError branch above
+            if direct_key is None:  # pragma: no cover - unreachable: DuplicateKeyError only fires on direct_key
+                msg = "Direct chat creation raced without a direct_key"
+                raise RuntimeError(msg)
+            existing = await self.chats_repository.fetch_direct_by_key(direct_key)
+            if existing is None:  # pragma: no cover - defensive: the unique constraint guarantees a match here
+                msg = "Direct chat creation raced but the resulting row could not be found"
+                raise RuntimeError(msg)
+            return existing, False
+
+        # Kept outside the `async with` block for the same reason as the lookup above.
+        return await self.chats_repository.fetch_with_members(chat.id), True
