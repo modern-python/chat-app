@@ -36,6 +36,10 @@ more realistic than a two-table CRUD template.
 just --list
 ```
 
+to see every recipe. `just run` brings up the app and Postgres in Docker
+Compose and serves the API on `:8000`. `just test` cycles the database and
+runs the full test suite (also via Docker Compose) at 100% coverage.
+
 ## Why this repo
 
 `litestar-sqlalchemy-template` shows each library in isolation on a two-table
