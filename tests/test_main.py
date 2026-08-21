@@ -1,13 +1,16 @@
+import modern_di
 import sqlalchemy as sa
 from advanced_alchemy.exceptions import NotFoundError
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.pool import QueuePool
 
-import app.api.__main__
+from app import ioc
 from app.api import exception_handlers
-from app.database.resources import close_database_engine, close_session, create_database_engine, create_session
+from app.database.resources import close_database_engine, create_database_engine
 from app.database.tables import UsersTable
 from app.exceptions import PermissionDeniedError
+from app.settings import settings
 from tests.factories import UserFactory
 
 
@@ -20,10 +23,6 @@ async def test_openapi_schema_is_served(client: AsyncClient) -> None:
     response = await client.get("/docs/openapi.json")
     assert response.status_code == 200
     assert response.json()["info"]["title"] == "chat-app"
-
-
-def test_main_module_guards_granian_startup_behind_dunder_main() -> None:
-    assert app.api.__main__.__name__ != "__main__"
 
 
 async def test_not_found_error_handler_returns_404() -> None:
@@ -43,14 +42,15 @@ async def test_permission_denied_handler_defaults_message_when_empty() -> None:
     assert response.content == {"detail": "Permission denied"}
 
 
-async def test_database_resources_round_trip() -> None:
+async def test_create_database_engine_reads_settings_and_can_be_disposed() -> None:
+    # Exercises `close_database_engine` too: nothing else calls it, since the `db_session`
+    # fixture always overrides `Database.database_engine` before it is ever resolved, so its
+    # cache finalizer never fires.
     engine = create_database_engine()
     try:
-        session = create_session(engine)
-        try:
-            assert isinstance(session, AsyncSession)
-        finally:
-            await close_session(session)
+        assert isinstance(engine.pool, QueuePool)
+        assert engine.pool.size() == settings.db_pool_size
+        assert engine.url.database == settings.db_dsn_parsed.database
     finally:
         await close_database_engine(engine)
 
@@ -67,3 +67,21 @@ async def test_db_session_insert_is_visible_within_test(db_session: AsyncSession
 async def test_db_session_rolls_back_between_tests(db_session: AsyncSession) -> None:
     result = await db_session.scalars(sa.select(UsersTable))
     assert result.all() == []
+
+
+async def test_di_resolved_session_shares_the_overridden_connection(
+    di_container: modern_di.Container,
+    db_session: AsyncSession,
+) -> None:
+    # Proves the load-bearing part of the `db_session` fixture: a request-scoped session
+    # resolved through the real DI provider (`create_session`/`close_session`, the path
+    # production route handlers use) sees writes made on the fixture's own session, because
+    # both share the connection that `db_session` overrode `Database.database_engine` with.
+    user = UserFactory.build()
+    db_session.add(user)
+    await db_session.flush()
+
+    async with di_container.build_child_container(scope=modern_di.Scope.REQUEST) as request_container:
+        resolved_session = request_container.resolve_provider(ioc.Database.database_session)
+        result = await resolved_session.scalars(sa.select(UsersTable).where(UsersTable.username == user.username))
+        assert result.one().id == user.id

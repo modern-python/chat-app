@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import ioc
 from app.api.app import build_app
-from app.database.resources import create_database_engine
+from app.database.resources import create_database_engine, create_session
 
 
 @pytest.fixture
@@ -46,15 +46,10 @@ async def db_session(di_container: modern_di.Container) -> typing.AsyncIterator[
     di_container.override(ioc.Database.database_engine, connection)
 
     try:
-        yield AsyncSession(
-            connection,
-            expire_on_commit=False,
-            autoflush=False,
-            join_transaction_mode="create_savepoint",
-        )
+        yield create_session(connection)
     finally:
         if connection.in_transaction():
             await transaction.rollback()
         await connection.close()
         await engine.dispose()
-        di_container.reset_override()
+        di_container.reset_override(ioc.Database.database_engine)
