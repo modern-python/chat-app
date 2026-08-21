@@ -66,6 +66,10 @@ ignore = [
 ]
 isort.lines-after-imports = 2
 isort.no-lines-before = ["standard-library", "local-folder"]
+# Handlers and tests take their dependencies as parameters - Litestar binds path/query/DI
+# params by name, pytest binds fixtures by name - so the default limit of 5 flags ordinary
+# code. max-positional-args defaults to this, which covers PLR0917 as well.
+pylint.max-args = 10
 
 [tool.ruff.lint.extend-per-file-ignores]
 "tests/*.py" = ["S101", "PLR2004"]
