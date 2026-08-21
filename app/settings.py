@@ -61,6 +61,11 @@ class Settings(pydantic_settings.BaseSettings):
         return make_url(self.db_dsn)
 
     @property
+    def sync_db_dsn_parsed(self) -> URL:
+        # Alembic drives psycopg2, not asyncpg.
+        return self.db_dsn_parsed.set(drivername="postgresql")
+
+    @property
     def api_bootstrapper_config(self) -> LitestarConfig:
         return LitestarConfig(
             service_name=self.service_name,

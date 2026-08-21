@@ -27,6 +27,19 @@ jobs:
 
   pytest:
     runs-on: ubuntu-latest
+    name: pytest (${{ matrix.name }})
+    strategy:
+      # Without this a failing app suite cancels the migration leg, collapsing two
+      # independent signals back into one.
+      fail-fast: false
+      matrix:
+        include:
+          - name: app
+            run: uv run alembic upgrade head && uv run pytest .
+          # No `alembic upgrade` first: pytest-alembic drives the schema itself, and running
+          # it against an empty database is what makes test_upgrade mean anything.
+          - name: migrations
+            run: uv run pytest tests/migrations --override-ini=addopts=
     services:
       postgres:
         image: postgres:17
@@ -47,8 +60,7 @@ jobs:
       - run: uv python pin 3.14
       - run: |
           uv sync --all-extras --all-groups --no-install-project
-          uv run alembic upgrade head
-          uv run pytest .
+          ${{ matrix.run }}
         env:
           SERVICE_ENVIRONMENT: ci
           PYTHONDONTWRITEBYTECODE: 1

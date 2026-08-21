@@ -53,7 +53,7 @@ async def test_system_messages_count_as_unread(
     assert chats[0].unread_count == 1
 
 
-async def test_marking_read_clears_the_count(  # noqa: PLR0913, PLR0917 - each is a fixture-injected dependency
+async def test_marking_read_clears_the_count(
     fetch_chats_use_case: FetchChatsUseCase,
     mark_read_use_case: MarkReadUseCase,
     direct_chat: tables.ChatsTable,
@@ -69,7 +69,7 @@ async def test_marking_read_clears_the_count(  # noqa: PLR0913, PLR0917 - each i
     assert chats[0].unread_count == 0
 
 
-async def test_deleted_messages_are_not_unread(  # noqa: PLR0913, PLR0917 - each is a fixture-injected dependency
+async def test_deleted_messages_are_not_unread(
     fetch_chats_use_case: FetchChatsUseCase,
     delete_message_use_case: DeleteMessageUseCase,
     direct_chat: tables.ChatsTable,
@@ -92,7 +92,7 @@ async def test_chat_with_no_messages_has_no_last_message(
     assert chats[0].unread_count == 0
 
 
-async def test_listing_orders_most_recently_active_chat_first(  # noqa: PLR0913, PLR0917 - fixture-injected
+async def test_listing_orders_most_recently_active_chat_first(
     fetch_chats_use_case: FetchChatsUseCase,
     create_chat_use_case: CreateChatUseCase,
     direct_chat: tables.ChatsTable,
@@ -108,7 +108,7 @@ async def test_listing_orders_most_recently_active_chat_first(  # noqa: PLR0913,
     assert [chat.id for chat in chats] == [direct_chat.id, other_chat.id]
 
 
-async def test_unread_counts_differ_per_chat(  # noqa: PLR0913, PLR0917 - each is a fixture-injected dependency
+async def test_unread_counts_differ_per_chat(
     fetch_chats_use_case: FetchChatsUseCase,
     create_chat_use_case: CreateChatUseCase,
     direct_chat: tables.ChatsTable,
@@ -142,7 +142,7 @@ async def test_non_member_cannot_mark_read(
         )
 
 
-async def test_marking_read_with_a_message_from_another_chat_is_rejected(  # noqa: PLR0913, PLR0917 - fixture-injected
+async def test_marking_read_with_a_message_from_another_chat_is_rejected(
     mark_read_use_case: MarkReadUseCase,
     create_chat_use_case: CreateChatUseCase,
     direct_chat: tables.ChatsTable,
@@ -169,7 +169,7 @@ async def test_marking_read_rejects_an_unknown_message_id(
         )
 
 
-async def test_marking_read_is_monotonic(  # noqa: PLR0913, PLR0917 - each is a fixture-injected dependency
+async def test_marking_read_is_monotonic(
     fetch_chats_use_case: FetchChatsUseCase,
     mark_read_use_case: MarkReadUseCase,
     direct_chat: tables.ChatsTable,
@@ -193,7 +193,7 @@ async def test_marking_read_is_monotonic(  # noqa: PLR0913, PLR0917 - each is a 
     assert chats[0].unread_count == 0
 
 
-async def test_deleting_the_newest_message_updates_preview_and_ordering(  # noqa: PLR0913, PLR0917 - fixture-injected
+async def test_deleting_the_newest_message_updates_preview_and_ordering(
     fetch_chats_use_case: FetchChatsUseCase,
     delete_message_use_case: DeleteMessageUseCase,
     create_chat_use_case: CreateChatUseCase,

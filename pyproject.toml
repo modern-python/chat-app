@@ -17,6 +17,7 @@ dependencies = [
     "db-retry",
     # database
     "alembic",
+    "alembic-postgresql-enum",
     "psycopg2",
     "sqlalchemy[asyncio]",
     "asyncpg",
@@ -34,6 +35,7 @@ dev = [
     "pytest-asyncio",
     "asgi_lifespan",
     "modern-di-pytest>=3,<4",
+    "pytest-alembic",
 ]
 lint = ["ruff", "ty", "eof-fixer"]
 
@@ -64,13 +66,17 @@ ignore = [
 ]
 isort.lines-after-imports = 2
 isort.no-lines-before = ["standard-library", "local-folder"]
+# Handlers and tests take their dependencies as parameters - Litestar binds path/query/DI
+# params by name, pytest binds fixtures by name - so the default limit of 5 flags ordinary
+# code. max-positional-args defaults to this, which covers PLR0917 as well.
+pylint.max-args = 10
 
 [tool.ruff.lint.extend-per-file-ignores]
 "tests/*.py" = ["S101", "PLR2004"]
 "migrations/*.py" = ["ERA001"]
 
 [tool.pytest.ini_options]
-addopts = "--cov=. --cov-report term-missing --cov-fail-under=100"
+addopts = "--cov=. --cov-report term-missing --cov-fail-under=100 --ignore=tests/migrations"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 filterwarnings = ["error"]
@@ -83,6 +89,9 @@ concurrency = ["thread", "greenlet"]
 disable_warnings = ["couldnt-parse"]
 omit = [
     "migrations/*",
+    # Excluded from the default pytest run (see addopts) because they cycle the schema; they
+    # run under `just test-migrations` instead, where coverage is off.
+    "tests/migrations/*",
     "app/api/__main__.py",
     # No __init__.py under planning/ (see the comment atop planning/index.py), so coverage's
     # package walk never reaches this file on its own - omit it explicitly rather than relying
