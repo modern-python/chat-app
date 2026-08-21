@@ -60,6 +60,7 @@ ignore = [
     "TC001",
     "TC002",
     "TC003",
+    "CPY001", # allow missing copyright notice
 ]
 isort.lines-after-imports = 2
 isort.no-lines-before = ["standard-library", "local-folder"]
