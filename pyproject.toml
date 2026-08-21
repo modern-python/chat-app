@@ -1,0 +1,91 @@
+[project]
+name = "chat-app"
+version = "0"
+description = "Reference chat application for the modern-python organisation"
+readme = "readme.md"
+requires-python = ">=3.14"
+authors = [{ name = "Artur Shiriev", email = "me@shiriev.ru" }]
+license = "MIT"
+dependencies = [
+    "litestar[jwt]",
+    "lite-bootstrap[litestar-all]",
+    "modern-di-litestar>=3,<4",
+    "advanced-alchemy",
+    "pydantic-settings",
+    "granian[uvloop]",
+    "argon2-cffi",
+    "db-retry",
+    # database
+    "alembic",
+    "psycopg2",
+    "sqlalchemy[asyncio]",
+    "asyncpg",
+    # tracing
+    "opentelemetry-instrumentation-asyncpg",
+    "opentelemetry-instrumentation-sqlalchemy",
+]
+
+[dependency-groups]
+dev = [
+    "polyfactory",
+    "httpx",
+    "pytest",
+    "pytest-cov",
+    "pytest-asyncio",
+    "asgi_lifespan",
+    "modern-di-pytest>=3,<4",
+]
+lint = ["ruff", "ty", "eof-fixer"]
+
+[tool.ruff]
+fix = true
+unsafe-fixes = true
+line-length = 120
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D1",
+    "FBT",
+    "INP",
+    "B008",
+    "ANN204",
+    "RUF001",
+    "D203",
+    "D213",
+    "COM812",
+    "ISC001",
+    "S105",
+    "TC001",
+    "TC002",
+    "TC003",
+    "CPY001", # allow missing copyright notice
+]
+isort.lines-after-imports = 2
+isort.no-lines-before = ["standard-library", "local-folder"]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/*.py" = ["S101", "PLR2004"]
+"migrations/*.py" = ["ERA001"]
+
+[tool.pytest.ini_options]
+addopts = "--cov=. --cov-report term-missing --cov-fail-under=100"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = ["error"]
+
+[tool.coverage.report]
+exclude_also = ["if typing.TYPE_CHECKING:"]
+
+[tool.coverage.run]
+concurrency = ["thread", "greenlet"]
+disable_warnings = ["couldnt-parse"]
+omit = [
+    "migrations/*",
+    "app/api/__main__.py",
+    # No __init__.py under planning/ (see the comment atop planning/index.py), so coverage's
+    # package walk never reaches this file on its own - omit it explicitly rather than relying
+    # on that as an accident of discovery.
+    "planning/index.py",
+]

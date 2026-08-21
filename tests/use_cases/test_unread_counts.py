@@ -1,0 +1,228 @@
+import typing
+import uuid
+
+import pytest
+
+from app.database import tables
+from app.exceptions import PermissionDeniedError, ValidationError
+from app.repositories.messages_repository import MessagesRepository
+from app.schemas import api as schemas
+from app.use_cases.create_chat import CreateChatUseCase
+from app.use_cases.delete_message import DeleteMessageUseCase
+from app.use_cases.fetch_chats import FetchChatsUseCase
+from app.use_cases.mark_read import MarkReadUseCase
+
+
+SendFixture = typing.Callable[[tables.UsersTable, int, str], typing.Awaitable[tuple[tables.MessagesTable, bool]]]
+
+
+async def test_unread_counts_messages_from_others(
+    fetch_chats_use_case: FetchChatsUseCase,
+    direct_chat: tables.ChatsTable,
+    alice: tables.UsersTable,
+    bob: tables.UsersTable,
+    send: SendFixture,
+) -> None:
+    await send(bob, direct_chat.id, "one")
+    await send(bob, direct_chat.id, "two")
+    rows = await fetch_chats_use_case(alice)
+    assert rows[0].unread_count == 2
+
+
+async def test_own_messages_are_never_unread(
+    fetch_chats_use_case: FetchChatsUseCase,
+    direct_chat: tables.ChatsTable,
+    alice: tables.UsersTable,
+    send: SendFixture,
+) -> None:
+    await send(alice, direct_chat.id, "mine")
+    rows = await fetch_chats_use_case(alice)
+    assert rows[0].unread_count == 0
+
+
+async def test_system_messages_count_as_unread(
+    fetch_chats_use_case: FetchChatsUseCase,
+    messages_repository: MessagesRepository,
+    direct_chat: tables.ChatsTable,
+    alice: tables.UsersTable,
+) -> None:
+    await messages_repository.create(
+        tables.MessagesTable(chat_id=direct_chat.id, user_id=None, idempotency_key=uuid.uuid4(), text="Bob joined")
+    )
+    rows = await fetch_chats_use_case(alice)
+    assert rows[0].unread_count == 1
+
+
+async def test_marking_read_clears_the_count(  # noqa: PLR0913, PLR0917 - each is a fixture-injected dependency
+    fetch_chats_use_case: FetchChatsUseCase,
+    mark_read_use_case: MarkReadUseCase,
+    direct_chat: tables.ChatsTable,
+    alice: tables.UsersTable,
+    bob: tables.UsersTable,
+    send: SendFixture,
+) -> None:
+    message, _ = await send(bob, direct_chat.id, "one")
+    await mark_read_use_case(alice, direct_chat.id, schemas.MarkReadRequest(last_read_message_id=message.id))
+    rows = await fetch_chats_use_case(alice)
+    assert rows[0].unread_count == 0
+
+
+async def test_deleted_messages_are_not_unread(  # noqa: PLR0913, PLR0917 - each is a fixture-injected dependency
+    fetch_chats_use_case: FetchChatsUseCase,
+    delete_message_use_case: DeleteMessageUseCase,
+    direct_chat: tables.ChatsTable,
+    alice: tables.UsersTable,
+    bob: tables.UsersTable,
+    send: SendFixture,
+) -> None:
+    message, _ = await send(bob, direct_chat.id, "one")
+    await delete_message_use_case(bob, message.id)
+    rows = await fetch_chats_use_case(alice)
+    assert rows[0].unread_count == 0
+
+
+async def test_chat_with_no_messages_has_no_last_message(
+    fetch_chats_use_case: FetchChatsUseCase, direct_chat: tables.ChatsTable, alice: tables.UsersTable
+) -> None:
+    rows = await fetch_chats_use_case(alice)
+    assert rows[0].chat.id == direct_chat.id
+    assert rows[0].last_message is None
+    assert rows[0].unread_count == 0
+
+
+async def test_listing_orders_most_recently_active_chat_first(  # noqa: PLR0913, PLR0917 - fixture-injected
+    fetch_chats_use_case: FetchChatsUseCase,
+    create_chat_use_case: CreateChatUseCase,
+    direct_chat: tables.ChatsTable,
+    alice: tables.UsersTable,
+    carol: tables.UsersTable,
+    send: SendFixture,
+) -> None:
+    other_chat, _ = await create_chat_use_case(
+        alice, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[carol.id])
+    )
+    await send(alice, direct_chat.id, "first chat gets a message")
+    rows = await fetch_chats_use_case(alice)
+    assert [row.chat.id for row in rows] == [direct_chat.id, other_chat.id]
+
+
+async def test_unread_counts_differ_per_chat(  # noqa: PLR0913, PLR0917 - each is a fixture-injected dependency
+    fetch_chats_use_case: FetchChatsUseCase,
+    create_chat_use_case: CreateChatUseCase,
+    direct_chat: tables.ChatsTable,
+    alice: tables.UsersTable,
+    bob: tables.UsersTable,
+    carol: tables.UsersTable,
+    send: SendFixture,
+) -> None:
+    # A correlated subquery that returned the same count for every row would still pass a test
+    # that only checks one chat - two chats with two different counts is what proves it's
+    # actually correlated per-row rather than computed once and reused.
+    other_chat, _ = await create_chat_use_case(
+        alice, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[carol.id])
+    )
+    await send(bob, direct_chat.id, "one")
+    await send(bob, direct_chat.id, "two")
+    await send(carol, other_chat.id, "hi")
+
+    rows = await fetch_chats_use_case(alice)
+
+    counts = {row.chat.id: row.unread_count for row in rows}
+    assert counts == {direct_chat.id: 2, other_chat.id: 1}
+
+
+async def test_non_member_cannot_mark_read(
+    mark_read_use_case: MarkReadUseCase, direct_chat: tables.ChatsTable, carol: tables.UsersTable
+) -> None:
+    with pytest.raises(PermissionDeniedError):
+        await mark_read_use_case(carol, direct_chat.id, schemas.MarkReadRequest(last_read_message_id=1))
+
+
+async def test_marking_read_with_a_message_from_another_chat_is_rejected(  # noqa: PLR0913, PLR0917 - fixture-injected
+    mark_read_use_case: MarkReadUseCase,
+    create_chat_use_case: CreateChatUseCase,
+    direct_chat: tables.ChatsTable,
+    alice: tables.UsersTable,
+    carol: tables.UsersTable,
+    send: SendFixture,
+) -> None:
+    other_chat, _ = await create_chat_use_case(
+        alice, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[carol.id])
+    )
+    other_message, _ = await send(alice, other_chat.id, "elsewhere")
+    with pytest.raises(ValidationError):
+        await mark_read_use_case(alice, direct_chat.id, schemas.MarkReadRequest(last_read_message_id=other_message.id))
+
+
+async def test_marking_read_rejects_an_unknown_message_id(
+    mark_read_use_case: MarkReadUseCase, direct_chat: tables.ChatsTable, alice: tables.UsersTable
+) -> None:
+    with pytest.raises(ValidationError):
+        await mark_read_use_case(alice, direct_chat.id, schemas.MarkReadRequest(last_read_message_id=999999))
+
+
+async def test_marking_read_is_monotonic(  # noqa: PLR0913, PLR0917 - each is a fixture-injected dependency
+    fetch_chats_use_case: FetchChatsUseCase,
+    mark_read_use_case: MarkReadUseCase,
+    direct_chat: tables.ChatsTable,
+    alice: tables.UsersTable,
+    bob: tables.UsersTable,
+    send: SendFixture,
+) -> None:
+    first, _ = await send(bob, direct_chat.id, "one")
+    second, _ = await send(bob, direct_chat.id, "two")
+    await mark_read_use_case(alice, direct_chat.id, schemas.MarkReadRequest(last_read_message_id=second.id))
+
+    # An out-of-order/replayed request naming an earlier message must not move the marker back.
+    member = await mark_read_use_case(alice, direct_chat.id, schemas.MarkReadRequest(last_read_message_id=first.id))
+
+    assert member.last_read_message_id == second.id
+    rows = await fetch_chats_use_case(alice)
+    assert rows[0].unread_count == 0
+
+
+async def test_deleting_the_newest_message_updates_preview_and_ordering(  # noqa: PLR0913, PLR0917 - fixture-injected
+    fetch_chats_use_case: FetchChatsUseCase,
+    delete_message_use_case: DeleteMessageUseCase,
+    create_chat_use_case: CreateChatUseCase,
+    direct_chat: tables.ChatsTable,
+    alice: tables.UsersTable,
+    carol: tables.UsersTable,
+    send: SendFixture,
+) -> None:
+    other_chat, _ = await create_chat_use_case(
+        alice, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[carol.id])
+    )
+    await send(alice, direct_chat.id, "direct chat message")
+    # other_chat's only message - deleting it must also cover the "deleting the only message"
+    # case: last_message becomes null and the chat sorts last.
+    newest, _ = await send(alice, other_chat.id, "other chat message")
+
+    before = await fetch_chats_use_case(alice)
+    assert [row.chat.id for row in before] == [other_chat.id, direct_chat.id]
+
+    await delete_message_use_case(alice, newest.id)
+
+    after = await fetch_chats_use_case(alice)
+    assert [row.chat.id for row in after] == [direct_chat.id, other_chat.id]
+    other_row = next(row for row in after if row.chat.id == other_chat.id)
+    assert other_row.last_message is None
+    assert other_row.chat.last_message_id is None
+
+
+async def test_deleting_a_non_newest_message_leaves_preview_and_ordering_unchanged(
+    fetch_chats_use_case: FetchChatsUseCase,
+    delete_message_use_case: DeleteMessageUseCase,
+    direct_chat: tables.ChatsTable,
+    alice: tables.UsersTable,
+    send: SendFixture,
+) -> None:
+    first, _ = await send(alice, direct_chat.id, "first")
+    second, _ = await send(alice, direct_chat.id, "second")
+
+    await delete_message_use_case(alice, first.id)
+
+    rows = await fetch_chats_use_case(alice)
+    assert rows[0].chat.last_message_id == second.id
+    assert rows[0].last_message is not None
+    assert rows[0].last_message.id == second.id
