@@ -27,7 +27,7 @@ class ChatsRepository(SQLAlchemyAsyncRepositoryService[tables.ChatsTable]):
             load=[orm.selectinload(tables.ChatsTable.members)],
         )
 
-    async def list_for_user(self, user_id: int) -> Sequence[sa.Row[tuple[tables.ChatsTable, int]]]:
+    async def list_for_user(self, user_id: int) -> Sequence[tables.ChatsTable]:
         unread_count: typing.Final = (
             sa.select(sa.func.count(tables.MessagesTable.id))
             .where(
@@ -41,10 +41,19 @@ class ChatsRepository(SQLAlchemyAsyncRepositoryService[tables.ChatsTable]):
             .label("unread_count")
         )
         statement: typing.Final = (
-            sa.select(tables.ChatsTable, unread_count)
+            sa.select(tables.ChatsTable)
+            .options(
+                orm.with_expression(tables.ChatsTable.unread_count, unread_count),
+                orm.selectinload(tables.ChatsTable.last_message),
+            )
             .join(tables.ChatMembersTable, tables.ChatMembersTable.chat_id == tables.ChatsTable.id)
             .where(tables.ChatMembersTable.user_id == user_id)
             .order_by(sa.func.coalesce(tables.ChatsTable.last_message_id, 0).desc())
+            # Sessions run expire_on_commit=False, so a ChatsTable already in the identity map
+            # keeps whatever unread_count/last_message it was loaded with; without this, a second
+            # listing in the same session would hand back the first one's values. Safe here only
+            # because this query is read-only - populate_existing overwrites in-memory state.
+            .execution_options(populate_existing=True)
         )
         result: typing.Final = await self.repository.session.execute(statement)
-        return result.all()
+        return result.scalars().all()

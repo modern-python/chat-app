@@ -60,7 +60,10 @@ existing message id from a nonexistent one via `404` vs `403` on
 ## Listing and unread counts
 
 `GET /api/chats/` → `FetchChatsUseCase` (`app/use_cases/fetch_chats.py`), backed
-by `ChatsRepository.list_for_user`. Unread count is a correlated scalar
+by `ChatsRepository.list_for_user`, which returns plain `ChatsTable` instances
+carrying two extra attributes mapped for exactly this query — so the endpoint
+validates them straight through `schemas.Chats.from_models(...)` with no
+per-row DTO in between. Unread count is a correlated scalar
 subquery per row, not a Python loop: `count(messages WHERE chat_id = ? AND id
 > COALESCE(member.last_read_message_id, 0) AND user_id IS DISTINCT FROM
 member.user_id AND deleted_at IS NULL)`, joined against `chat_members` and
@@ -70,12 +73,25 @@ DISTINCT FROM` rather than `!=` matters because system messages carry
 `user_id IS NULL`, and `NULL != me` evaluates to `NULL` in SQL, which would
 silently drop every system message from the count.
 
-The use case then loads every listed chat's `last_message` in one bounded
-`WHERE id IN (...)` query (`FetchChatsUseCase.__call__`), not one query per
-row — the `deleted_at.is_(None)` filter on that query is a self-defending
-guard, not the source of truth, since `DeleteMessageUseCase` already repoints
+The count reaches the ORM instance through `ChatsTable.unread_count`, an
+`orm.query_expression()` that `list_for_user` fills with `with_expression(...)`;
+any other query that loads a chat gets its `default_expr` literal `0`, so the
+attribute is never `None`. The preview comes from `ChatsTable.last_message`, a
+`viewonly` many-to-one on `last_message_id` loaded by one `selectinload` — one
+extra round trip for the whole page, not one per row. `last_message_id` carries
+no `ForeignKey` (that would close a cycle with `messages.chat_id`), so the
+relationship annotates the join column `orm.foreign()` by hand and folds
+`deleted_at IS NULL` into its `primaryjoin`: a self-defending guard, not the
+source of truth, since `DeleteMessageUseCase` already repoints
 `last_message_id` off a deleted message in the same commit as the delete (see
 `messages.md`).
+
+`list_for_user` runs with `populate_existing=True`. Sessions are built
+`expire_on_commit=False`, so a `ChatsTable` already in the identity map would
+otherwise keep the `unread_count` and `last_message` it was first loaded with,
+and a second listing in the same session would hand back the first one's
+numbers. That is safe only because this query is read-only — `populate_existing`
+overwrites in-memory state on the entities it returns.
 
 ## Marking read
 

@@ -18,7 +18,7 @@ class DeleteMessageUseCase:
     chats_repository: ChatsRepository
 
     @postgres_retry
-    async def __call__(self, actor: tables.UsersTable, message_id: int) -> None:
+    async def __call__(self, *, actor: tables.UsersTable, message_id: int) -> None:
         async with self.transaction:
             message = await fetch_message_for_author(
                 messages_repository=self.messages_repository,

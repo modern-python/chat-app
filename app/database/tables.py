@@ -57,6 +57,30 @@ class ChatsTable(BigIntAuditBase):
         "ChatMembersTable", lazy="noload", uselist=True, viewonly=True
     )
 
+    # Per-viewer state that the chat listing needs alongside the chat's own columns. Both are
+    # mapped here rather than assembled in Python so that a listed chat is a plain ChatsTable
+    # whose attribute names already match the response schema - no per-row DTO, no aliases.
+    #
+    # unread_count is only populated when the query asks for it via with_expression(); every
+    # other query gets default_expr's literal 0, so the attribute is never None.
+    unread_count: orm.Mapped[int] = orm.query_expression(default_expr=sa.literal(0))
+    # last_message_id deliberately carries no ForeignKey (a chats -> messages FK would close a
+    # cycle with messages.chat_id), so the join column has to be annotated foreign() by hand.
+    # The soft-delete guard lives in the join rather than at the call site: a chat must never
+    # preview a deleted message, whatever loads it. DeleteMessageUseCase still repoints
+    # last_message_id in the same commit as the delete - this only keeps the mapping correct on
+    # its own if some other write path ever fails to.
+    last_message: orm.Mapped[MessagesTable | None] = orm.relationship(
+        "MessagesTable",
+        primaryjoin=lambda: sa.and_(
+            orm.foreign(ChatsTable.last_message_id) == MessagesTable.id,
+            MessagesTable.deleted_at.is_(None),
+        ),
+        lazy="noload",
+        uselist=False,
+        viewonly=True,
+    )
+
 
 class ChatMembersTable(BigIntBase):
     __tablename__ = "chat_members"

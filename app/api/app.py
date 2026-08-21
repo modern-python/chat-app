@@ -18,16 +18,6 @@ from app.api.endpoints import chats as chats_endpoints
 from app.api.endpoints import messages as messages_endpoints
 from app.exceptions import ConflictError, PermissionDeniedError, ValidationError
 from app.settings import settings
-from app.use_cases.authenticate_user import AuthenticateUserUseCase
-from app.use_cases.create_chat import CreateChatUseCase
-from app.use_cases.create_message import CreateMessageUseCase
-from app.use_cases.delete_message import DeleteMessageUseCase
-from app.use_cases.edit_message import EditMessageUseCase
-from app.use_cases.fetch_chat import FetchChatUseCase
-from app.use_cases.fetch_chats import FetchChatsUseCase
-from app.use_cases.fetch_messages import FetchMessagesUseCase
-from app.use_cases.mark_read import MarkReadUseCase
-from app.use_cases.register_user import RegisterUserUseCase
 
 
 def build_app() -> litestar.Litestar:
@@ -45,19 +35,14 @@ def build_app() -> litestar.Litestar:
                 ConflictError: exception_handlers.conflict_error_handler,
             },
             route_handlers=[auth_endpoints.ROUTER, chats_endpoints.ROUTER, messages_endpoints.ROUTER],
-            plugins=[modern_di_litestar.ModernDIPlugin(di_container), JWTCookieAuthPlugin()],
-            dependencies={
-                "register_user_use_case": modern_di_litestar.FromDI(RegisterUserUseCase),
-                "authenticate_user_use_case": modern_di_litestar.FromDI(AuthenticateUserUseCase),
-                "create_chat_use_case": modern_di_litestar.FromDI(CreateChatUseCase),
-                "fetch_chat_use_case": modern_di_litestar.FromDI(FetchChatUseCase),
-                "create_message_use_case": modern_di_litestar.FromDI(CreateMessageUseCase),
-                "fetch_messages_use_case": modern_di_litestar.FromDI(FetchMessagesUseCase),
-                "edit_message_use_case": modern_di_litestar.FromDI(EditMessageUseCase),
-                "delete_message_use_case": modern_di_litestar.FromDI(DeleteMessageUseCase),
-                "fetch_chats_use_case": modern_di_litestar.FromDI(FetchChatsUseCase),
-                "mark_read_use_case": modern_di_litestar.FromDI(MarkReadUseCase),
-            },
+            # autowired_groups exposes one Litestar dependency per UseCases provider, named
+            # after the provider attribute - which is what every handler parameter is already
+            # called. Database and Repositories are deliberately left out: route handlers have
+            # no business resolving a session, a transaction or a repository directly.
+            plugins=[
+                modern_di_litestar.ModernDIPlugin(di_container, autowired_groups=[ioc.UseCases]),
+                JWTCookieAuthPlugin(),
+            ],
             request_max_body_size=settings.request_max_body_size,
         ),
         opentelemetry_instrumentors=[

@@ -21,7 +21,7 @@ class CreateMessageUseCase:
 
     @postgres_retry
     async def __call__(
-        self, actor: tables.UsersTable, chat_id: int, data: SendMessageRequest
+        self, *, actor: tables.UsersTable, chat_id: int, data: SendMessageRequest
     ) -> tuple[tables.MessagesTable, bool]:
         if not await self.chat_members_repository.is_member(chat_id, actor.id):
             msg = "Not a member of this chat"

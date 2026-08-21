@@ -59,7 +59,7 @@ async def test_send_returns_created_true_on_first_call(
     create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: tables.UsersTable
 ) -> None:
     message, created = await create_message_use_case(
-        alice, direct_chat.id, schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hi")
+        actor=alice, chat_id=direct_chat.id, data=schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hi")
     )
     assert created is True
     assert message.text == "hi"
@@ -70,10 +70,10 @@ async def test_repeated_idempotency_key_returns_the_same_message(
 ) -> None:
     key = uuid.uuid4()
     first, first_created = await create_message_use_case(
-        alice, direct_chat.id, schemas.SendMessageRequest(idempotency_key=key, text="hi")
+        actor=alice, chat_id=direct_chat.id, data=schemas.SendMessageRequest(idempotency_key=key, text="hi")
     )
     second, second_created = await create_message_use_case(
-        alice, direct_chat.id, schemas.SendMessageRequest(idempotency_key=key, text="hi again")
+        actor=alice, chat_id=direct_chat.id, data=schemas.SendMessageRequest(idempotency_key=key, text="hi again")
     )
     assert first_created is True
     assert second_created is False
@@ -88,7 +88,7 @@ async def test_send_updates_chat_last_message_id(
     alice: tables.UsersTable,
 ) -> None:
     message, _ = await create_message_use_case(
-        alice, direct_chat.id, schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hi")
+        actor=alice, chat_id=direct_chat.id, data=schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hi")
     )
     chat = await chats_repository.get_one(id=direct_chat.id)
     assert chat.last_message_id == message.id
@@ -99,7 +99,9 @@ async def test_non_member_cannot_send(
 ) -> None:
     with pytest.raises(PermissionDeniedError):
         await create_message_use_case(
-            carol, direct_chat.id, schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hi")
+            actor=carol,
+            chat_id=direct_chat.id,
+            data=schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hi"),
         )
 
 
@@ -108,7 +110,7 @@ async def test_concurrent_duplicate_key_recovers_the_winners_message(
 ) -> None:
     key = uuid.uuid4()
     winner, winner_created = await create_message_use_case(
-        alice, direct_chat.id, schemas.SendMessageRequest(idempotency_key=key, text="hi")
+        actor=alice, chat_id=direct_chat.id, data=schemas.SendMessageRequest(idempotency_key=key, text="hi")
     )
     assert winner_created is True
     winner_id = winner.id
@@ -124,7 +126,7 @@ async def test_concurrent_duplicate_key_recovers_the_winners_message(
         ),
     )
     loser, loser_created = await racer(
-        alice, direct_chat.id, schemas.SendMessageRequest(idempotency_key=key, text="hi again")
+        actor=alice, chat_id=direct_chat.id, data=schemas.SendMessageRequest(idempotency_key=key, text="hi again")
     )
     assert loser_created is False
     assert loser.id == winner_id
@@ -143,7 +145,11 @@ async def test_send_recovery_raises_if_the_winners_row_is_unreadable(
         ),
     )
     with pytest.raises(RuntimeError, match="could not be found"):
-        await broken(alice, direct_chat.id, schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hi"))
+        await broken(
+            actor=alice,
+            chat_id=direct_chat.id,
+            data=schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hi"),
+        )
 
 
 async def test_same_idempotency_key_in_two_different_chats_creates_two_messages(
@@ -157,15 +163,15 @@ async def test_same_idempotency_key_in_two_different_chats_creates_two_messages(
     # "send to this chat", not a retry across the whole table, so reusing it in a different
     # chat is a second, independent send.
     other_chat, _ = await create_chat_use_case(
-        alice, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[carol.id])
+        actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[carol.id])
     )
     key = uuid.uuid4()
 
     first, first_created = await create_message_use_case(
-        alice, direct_chat.id, schemas.SendMessageRequest(idempotency_key=key, text="hi")
+        actor=alice, chat_id=direct_chat.id, data=schemas.SendMessageRequest(idempotency_key=key, text="hi")
     )
     second, second_created = await create_message_use_case(
-        alice, other_chat.id, schemas.SendMessageRequest(idempotency_key=key, text="hi")
+        actor=alice, chat_id=other_chat.id, data=schemas.SendMessageRequest(idempotency_key=key, text="hi")
     )
 
     assert first_created is True

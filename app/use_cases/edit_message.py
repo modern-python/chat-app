@@ -19,7 +19,7 @@ class EditMessageUseCase:
 
     @postgres_retry
     async def __call__(
-        self, actor: tables.UsersTable, message_id: int, data: EditMessageRequest
+        self, *, actor: tables.UsersTable, message_id: int, data: EditMessageRequest
     ) -> tables.MessagesTable:
         async with self.transaction:
             message = await fetch_message_for_author(

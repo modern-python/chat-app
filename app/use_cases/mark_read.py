@@ -17,7 +17,9 @@ class MarkReadUseCase:
     messages_repository: MessagesRepository
 
     @postgres_retry
-    async def __call__(self, actor: tables.UsersTable, chat_id: int, data: MarkReadRequest) -> tables.ChatMembersTable:
+    async def __call__(
+        self, *, actor: tables.UsersTable, chat_id: int, data: MarkReadRequest
+    ) -> tables.ChatMembersTable:
         member: typing.Final = await self.chat_members_repository.fetch_member(chat_id, actor.id)
         if member is None:
             msg = "Not a member of this chat"

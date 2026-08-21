@@ -87,25 +87,10 @@ class Messages(Collection[Message]):
 
 
 class ChatListItem(Chat):
+    # ChatsTable maps unread_count and last_message itself (see app/database/tables.py), so a
+    # listed chat validates straight through from_attributes like any other ORM instance.
     last_message: Message | None = None
     unread_count: int = 0
-
-    @classmethod
-    def from_row(cls, chat: tables.ChatsTable, *, unread_count: int, last_message: tables.MessagesTable | None) -> Self:
-        # `chat` alone (via Chat's from_attributes=True) has no unread_count/last_message
-        # attributes - those are computed by FetchChatsUseCase, not columns on ChatsTable - so
-        # this validates them together from a dict instead of Chat.model_validate(chat) plus an
-        # unvalidated model_copy(update=...) patch.
-        return cls.model_validate(
-            {
-                "id": chat.id,
-                "chat_type": chat.chat_type,
-                "title": chat.title,
-                "created_by_id": chat.created_by_id,
-                "unread_count": unread_count,
-                "last_message": last_message,
-            }
-        )
 
 
 class Chats(Collection[ChatListItem]):

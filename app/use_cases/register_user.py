@@ -15,7 +15,7 @@ class RegisterUserUseCase:
     users_repository: UsersRepository
 
     @postgres_retry
-    async def __call__(self, data: RegisterRequest) -> tables.UsersTable:
+    async def __call__(self, *, data: RegisterRequest) -> tables.UsersTable:
         async with self.transaction:
             user: typing.Final = await self.users_repository.create(
                 tables.UsersTable(

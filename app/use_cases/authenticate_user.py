@@ -13,7 +13,7 @@ class AuthenticateUserUseCase:
     users_repository: UsersRepository
 
     @postgres_retry
-    async def __call__(self, username: str, password: str) -> tables.UsersTable | None:
+    async def __call__(self, *, username: str, password: str) -> tables.UsersTable | None:
         user: typing.Final = await self.users_repository.get_one_or_none(username=username)
         if user is None:
             # Hash anyway: skipping the argon2 work on an unknown username makes the
