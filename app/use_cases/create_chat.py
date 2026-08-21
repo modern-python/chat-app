@@ -76,7 +76,7 @@ class CreateChatUseCase:
 
         if chat is None:
             existing = await self.chats_repository.fetch_direct_by_key(direct_key)  # ty: ignore[invalid-argument-type]
-            if existing is None:  # pragma: no cover - defensive: the unique constraint guarantees a match here
+            if existing is None:
                 msg = "Direct chat creation raced but the resulting row could not be found"
                 raise RuntimeError(msg)
             return existing, False

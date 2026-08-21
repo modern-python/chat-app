@@ -33,6 +33,28 @@ class _RacingMessagesRepository(MessagesRepository):
         raise DuplicateKeyError(msg)
 
 
+class _NeverFoundMessagesRepository(MessagesRepository):
+    """Simulates a race whose recovery re-read can never find the winner's row.
+
+    Both `fetch_by_idempotency_key` calls (the pre-check and the post-rollback recovery
+    re-read) return `None`, and `create()` always raises `DuplicateKeyError` - a state the
+    unique constraint on `(chat_id, idempotency_key)` should make unreachable in production,
+    exercised here only to prove `CreateMessageUseCase` raises `RuntimeError` rather than
+    returning `None` silently.
+    """
+
+    async def fetch_by_idempotency_key(
+        self,
+        chat_id: int,  # noqa: ARG002
+        idempotency_key: uuid.UUID,  # noqa: ARG002
+    ) -> tables.MessagesTable | None:
+        return None
+
+    async def create(self, *_args: object, **_kwargs: object) -> tables.MessagesTable:
+        msg = "simulated race: another request already sent this message"
+        raise DuplicateKeyError(msg)
+
+
 async def test_send_returns_created_true_on_first_call(
     create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: tables.UsersTable
 ) -> None:
@@ -107,6 +129,21 @@ async def test_concurrent_duplicate_key_recovers_the_winners_message(
     assert loser_created is False
     assert loser.id == winner_id
     assert loser.text == "hi"
+
+
+async def test_send_recovery_raises_if_the_winners_row_is_unreadable(
+    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: tables.UsersTable
+) -> None:
+    broken = CreateMessageUseCase(
+        transaction=create_message_use_case.transaction,
+        chats_repository=create_message_use_case.chats_repository,
+        chat_members_repository=create_message_use_case.chat_members_repository,
+        messages_repository=_NeverFoundMessagesRepository(
+            session=create_message_use_case.messages_repository.repository.session, auto_commit=False
+        ),
+    )
+    with pytest.raises(RuntimeError, match="could not be found"):
+        await broken(alice, direct_chat.id, schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hi"))
 
 
 async def test_same_idempotency_key_in_two_different_chats_creates_two_messages(

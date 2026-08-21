@@ -59,7 +59,7 @@ class CreateMessageUseCase:
 
         if message is None:
             duplicate = await self.messages_repository.fetch_by_idempotency_key(chat_id, data.idempotency_key)
-            if duplicate is None:  # pragma: no cover - defensive: the unique constraint guarantees a match here
+            if duplicate is None:
                 msg = "Message send raced but the resulting row could not be found"
                 raise RuntimeError(msg)
             return duplicate, False

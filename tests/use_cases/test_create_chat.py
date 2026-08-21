@@ -29,6 +29,23 @@ class _RacingChatsRepository(ChatsRepository):
         raise DuplicateKeyError(msg)
 
 
+class _NeverFoundChatsRepository(ChatsRepository):
+    """Simulates a race whose recovery re-read can never find the winner's row.
+
+    Both `fetch_direct_by_key` calls (the pre-check and the post-rollback recovery re-read)
+    return `None`, and `create()` always raises `DuplicateKeyError` - a state the unique
+    constraint on `direct_key` should make unreachable in production, exercised here only to
+    prove `CreateChatUseCase` raises `RuntimeError` rather than returning `None` silently.
+    """
+
+    async def fetch_direct_by_key(self, direct_key: str) -> tables.ChatsTable | None:  # noqa: ARG002
+        return None
+
+    async def create(self, *_args: object, **_kwargs: object) -> tables.ChatsTable:
+        msg = "simulated race: another request already created this direct chat"
+        raise DuplicateKeyError(msg)
+
+
 class _AlwaysDuplicateChatsRepository(ChatsRepository):
     """Stub whose create() always raises DuplicateKeyError.
 
@@ -98,6 +115,20 @@ async def test_direct_chat_creation_recovers_from_a_concurrent_duplicate_key(
     )
     assert loser_created is False
     assert loser.id == winner_id
+
+
+async def test_direct_chat_recovery_raises_if_the_winners_row_is_unreadable(
+    create_chat_use_case: CreateChatUseCase, alice: tables.UsersTable, bob: tables.UsersTable
+) -> None:
+    broken = CreateChatUseCase(
+        transaction=create_chat_use_case.transaction,
+        chats_repository=_NeverFoundChatsRepository(
+            session=create_chat_use_case.chats_repository.repository.session, auto_commit=False
+        ),
+        chat_members_repository=create_chat_use_case.chat_members_repository,
+    )
+    with pytest.raises(RuntimeError, match="could not be found"):
+        await broken(alice, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id]))
 
 
 async def test_group_chat_reraises_an_unexpected_duplicate_key(
