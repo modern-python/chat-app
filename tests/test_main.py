@@ -43,9 +43,6 @@ async def test_permission_denied_handler_defaults_message_when_empty() -> None:
 
 
 async def test_create_database_engine_reads_settings_and_can_be_disposed() -> None:
-    # Exercises `close_database_engine` too: nothing else calls it, since the `db_session`
-    # fixture always overrides `Database.database_engine` before it is ever resolved, so its
-    # cache finalizer never fires.
     engine = create_database_engine()
     try:
         assert isinstance(engine.pool, QueuePool)
@@ -73,10 +70,6 @@ async def test_di_resolved_session_shares_the_overridden_connection(
     di_container: modern_di.Container,
     db_session: AsyncSession,
 ) -> None:
-    # Proves the load-bearing part of the `db_session` fixture: a request-scoped session
-    # resolved through the real DI provider (`create_session`/`close_session`, the path
-    # production route handlers use) sees writes made on the fixture's own session, because
-    # both share the connection that `db_session` overrode `Database.database_engine` with.
     user = UserFactory.build()
     db_session.add(user)
     await db_session.flush()

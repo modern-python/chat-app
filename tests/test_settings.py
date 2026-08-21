@@ -31,8 +31,7 @@ def test_ensure_jwt_secret_is_configured_allows_a_real_secret_outside_local() ->
 
 
 def test_ensure_jwt_secret_is_configured_rejects_the_default_secret_outside_local() -> None:
-    # jwt_secret set explicitly (rather than left to the JWT_SECRET env var, which the test
-    # container sets) to isolate this test from the environment it happens to run in.
+    # Explicit, not left to the JWT_SECRET the test container sets.
     settings = Settings(service_environment="production", jwt_secret=INSECURE_JWT_SECRET)
     with pytest.raises(RuntimeError, match="jwt_secret"):
         settings.ensure_jwt_secret_is_configured()

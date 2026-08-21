@@ -23,7 +23,7 @@ async def test_author_can_edit_message(client: AsyncClient) -> None:
 async def test_non_author_member_cannot_edit_message(client: AsyncClient) -> None:
     chat_id, _ = await _create_direct_chat(client)
     message = await _send(client, chat_id, "hi")
-    await _login(client, "bob")  # bob is a member of the chat but not the author
+    await _login(client, "bob")
 
     response = await client.patch(f"/api/messages/{message['id']}/", json={"text": "nope"})
 
@@ -34,7 +34,7 @@ async def test_non_author_member_cannot_edit_message(client: AsyncClient) -> Non
 async def test_non_member_cannot_edit_message(client: AsyncClient) -> None:
     chat_id, _ = await _create_direct_chat(client)
     message = await _send(client, chat_id, "hi")
-    await _register(client, "mallory")  # mallory is not in the chat at all
+    await _register(client, "mallory")
 
     response = await client.patch(f"/api/messages/{message['id']}/", json={"text": "nope"})
 
@@ -55,7 +55,7 @@ async def test_author_can_delete_message(client: AsyncClient) -> None:
 async def test_non_author_member_cannot_delete_message(client: AsyncClient) -> None:
     chat_id, _ = await _create_direct_chat(client)
     message = await _send(client, chat_id, "hi")
-    await _login(client, "bob")  # bob is a member of the chat but not the author
+    await _login(client, "bob")
 
     response = await client.delete(f"/api/messages/{message['id']}/")
 
@@ -66,7 +66,7 @@ async def test_non_author_member_cannot_delete_message(client: AsyncClient) -> N
 async def test_non_member_cannot_delete_message(client: AsyncClient) -> None:
     chat_id, _ = await _create_direct_chat(client)
     message = await _send(client, chat_id, "hi")
-    await _register(client, "mallory")  # mallory is not in the chat at all
+    await _register(client, "mallory")
 
     response = await client.delete(f"/api/messages/{message['id']}/")
 

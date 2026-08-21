@@ -10,7 +10,7 @@ from tests.api.helpers import send as _send
 @pytest.mark.usefixtures("db_session")
 async def test_listing_returns_only_the_callers_chats(client: AsyncClient) -> None:
     chat_id, _ = await _create_direct_chat(client)
-    await _register(client, "mallory")  # mallory is not a member of any chat
+    await _register(client, "mallory")
 
     mallory_response = await client.get("/api/chats/")
     await _login(client, "alice")

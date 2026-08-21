@@ -110,8 +110,9 @@ a session, a transaction or a repository directly. Provider scopes:
 `BigIntBase`. `app/database/tables.py` shares metadata with
 `orm.DeclarativeBase.metadata` (`METADATA = orm_registry.metadata;
 orm.DeclarativeBase.metadata = METADATA`) so Alembic autogen sees everything —
-this line mutates a third-party base class at import time; see the comment
-above it in the source for why. Repositories are
+this line mutates a third-party base class at import time, because otherwise
+models register on `orm.DeclarativeBase`'s own metadata and autogen sees no
+tables at all. Repositories are
 `SQLAlchemyAsyncRepositoryService[Model]` with a nested
 `BaseRepository(SQLAlchemyAsyncRepository[Model])`, same shape as the
 template, but every service here is constructed with `auto_commit=False`.
@@ -172,6 +173,16 @@ env vars (see `docker-compose.yml`). `api_bootstrapper_config` builds the
   mapping table and the one deliberate exception (login's `401` via Litestar's
   own `NotAuthorizedException`) are in `architecture/messages.md` and
   `architecture/auth.md`.
+- **Comments.** None, unless the code would read as a bug without one; then a
+  single line. Rationale, design decisions and "why not X" belong in
+  `architecture/<capability>.md` and `planning/changes/`, never in the source —
+  those are the durable homes, and a comment restating them goes stale in place.
+  What survives in `app/` today is the whole permitted category: a setting that
+  looks arbitrary (`join_transaction_mode`, `populate_existing`,
+  `capture_parameters=False`), an `orm.foreign()` on a column with no
+  `ForeignKey`, a `return` from inside a transaction block, discarded work that
+  is not dead code (`AuthenticateUserUseCase`'s hash-anyway). Alembic's own
+  `# ###` autogenerate markers stay — they are regenerated on every migration.
 - `ruff` is configured with `select = ["ALL"]` and a line length of 120 —
   expect strict lint. Type-check with `ty`; use `# ty: ignore[<rule>]` for
   suppressions.

@@ -36,8 +36,5 @@ class EditMessageUseCase:
             message.edited_at = datetime.datetime.now(tz=datetime.UTC)
             updated = await self.messages_repository.update(message, item_id=message_id)
             await self.transaction.commit()
-            # Returned from inside the block, right after commit(): __aexit__ then sees no open
-            # transaction (commit ended it) and only closes the session - it does not roll back,
-            # so `updated`'s already-loaded attributes (no relationships here to eager-load) stay
-            # usable for the caller.
+            # Safe inside the block: commit() ended the transaction, so __aexit__ only closes.
             return updated

@@ -29,8 +29,7 @@ def duplicate_key_error_handler(_: object, __: DuplicateKeyError) -> litestar.Re
 def foreign_key_error_handler(_: object, __: ForeignKeyError) -> litestar.Response[dict[str, typing.Any]]:
     return litestar.Response(
         media_type=litestar.MediaType.JSON,
-        # Constant detail, not str(exc): the underlying integrity error can carry bound
-        # parameter values (e.g. ids from other tables) that shouldn't be echoed back verbatim.
+        # Not str(exc): integrity errors can carry bound parameter values from other rows.
         content={"detail": "Invalid reference"},
         status_code=status_codes.HTTP_400_BAD_REQUEST,
     )

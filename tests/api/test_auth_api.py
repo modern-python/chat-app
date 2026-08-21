@@ -94,8 +94,6 @@ async def test_me_rejects_tampered_cookie(client: AsyncClient) -> None:
 
 @pytest.mark.usefixtures("db_session")
 async def test_me_rejects_token_with_non_numeric_subject(client: AsyncClient) -> None:
-    # Exercises retrieve_user_handler's int(token.sub) ValueError guard: Token only requires
-    # sub to be a non-empty string, so a forged/malformed subject must 401, not 500.
     token = jwt_cookie_auth.create_token(identifier="not-a-number")
     client.cookies.set(jwt_cookie_auth.key, token)
     response = await client.get("/api/auth/me/")
@@ -114,8 +112,6 @@ async def test_metrics_are_reachable_without_a_cookie(client: AsyncClient) -> No
 
 @pytest.mark.usefixtures("db_session")
 async def test_me_rejects_token_for_a_user_that_no_longer_exists(client: AsyncClient) -> None:
-    # A validly signed token whose subject has no matching row: session.get returns None and
-    # the middleware must turn that into 401, not treat it as an authenticated request.
     token = jwt_cookie_auth.create_token(identifier="999999999")
     client.cookies.set(jwt_cookie_auth.key, token)
     response = await client.get("/api/auth/me/")

@@ -32,16 +32,7 @@ class CreateChatUseCase:
             low, high = sorted(member_ids)
             direct_key = tables.build_direct_key(low, high)
 
-            # Kept outside the `async with` block below: Transaction.__aexit__ unconditionally
-            # rolls back and closes the session whenever it is left with an open, uncommitted
-            # transaction (session.in_transaction() True with no prior commit()), which expires
-            # and detaches every loaded attribute. A `return` from inside the block after this
-            # read - with no commit following it - would trigger exactly that on `existing`.
-            # (For direct chats specifically, this SELECT autobegins the session's transaction,
-            # so the `async with self.transaction:` block below actually *joins* that same
-            # transaction rather than starting a new one - see Transaction.__aenter__. That does
-            # not change the __aexit__ hazard above; it only means direct and group chats reach
-            # the block by different routes.)
+            # Outside the block: __aexit__ rolls back an uncommitted transaction and detaches this.
             existing = await self.chats_repository.fetch_direct_by_key(direct_key)
             if existing is not None:
                 return existing, False
@@ -58,16 +49,9 @@ class CreateChatUseCase:
                     )
                 )
             except DuplicateKeyError:
-                # Two concurrent requests to open the same direct chat both passed the
-                # fetch_direct_by_key pre-check above and both tried to insert; the loser hits
-                # uq_chats_direct_key here. Group chats have no unique constraint on `chats` to
-                # violate, so an unexpected DuplicateKeyError there re-raises and maps to the
-                # standard 409 instead of being funnelled into this direct-chat recovery path.
+                # Group chats have no unique constraint here, so a collision is not recoverable.
                 if direct_key is None:
                     raise
-                # Roll back and re-read the winner's row outside this block (same __aexit__
-                # hazard as the comment above): a `return` from in here without a commit
-                # first would detach whatever `fetch_direct_by_key` loaded, same as before.
                 await self.transaction.rollback()
             else:
                 for user_id in sorted(member_ids):
@@ -81,5 +65,4 @@ class CreateChatUseCase:
                 raise RuntimeError(msg)
             return existing, False
 
-        # Kept outside the `async with` block for the same reason as the lookup above.
         return await self.chats_repository.fetch_with_members(chat.id), True

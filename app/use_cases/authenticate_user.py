@@ -16,8 +16,7 @@ class AuthenticateUserUseCase:
     async def __call__(self, *, username: str, password: str) -> tables.UsersTable | None:
         user: typing.Final = await self.users_repository.get_one_or_none(username=username)
         if user is None:
-            # Hash anyway: skipping the argon2 work on an unknown username makes the
-            # response measurably faster and turns login into a username oracle.
+            # Discarded, but skipping the argon2 work would turn login timing into a username oracle.
             security.hash_password(password)
             return None
         if not security.verify_password(user.password_hash, password):

@@ -10,11 +10,7 @@ from sqlalchemy import orm
 
 
 METADATA: typing.Final = orm_registry.metadata
-# Redirects SQLAlchemy's shared declarative base onto advanced-alchemy's registry metadata so
-# that every model below - which inherits BigIntAuditBase/BigIntBase, themselves built on
-# orm.DeclarativeBase - registers its table on METADATA. Alembic's env.py autogenerates against
-# METADATA directly; without this reassignment, models would register on orm.DeclarativeBase's
-# own separate metadata instead, and autogen would see no tables at all.
+# Without this, models register on orm.DeclarativeBase's own metadata and autogen sees no tables.
 orm.DeclarativeBase.metadata = METADATA
 
 
@@ -56,19 +52,8 @@ class ChatsTable(BigIntAuditBase):
         "ChatMembersTable", lazy="noload", uselist=True, viewonly=True
     )
 
-    # Per-viewer state that the chat listing needs alongside the chat's own columns. Both are
-    # mapped here rather than assembled in Python so that a listed chat is a plain ChatsTable
-    # whose attribute names already match the response schema - no per-row DTO, no aliases.
-    #
-    # unread_count is only populated when the query asks for it via with_expression(); every
-    # other query gets default_expr's literal 0, so the attribute is never None.
     unread_count: orm.Mapped[int] = orm.query_expression(default_expr=sa.literal(0))
-    # last_message_id deliberately carries no ForeignKey (a chats -> messages FK would close a
-    # cycle with messages.chat_id), so the join column has to be annotated foreign() by hand.
-    # The soft-delete guard lives in the join rather than at the call site: a chat must never
-    # preview a deleted message, whatever loads it. DeleteMessageUseCase still repoints
-    # last_message_id in the same commit as the delete - this only keeps the mapping correct on
-    # its own if some other write path ever fails to.
+    # last_message_id carries no ForeignKey (it would cycle with messages.chat_id), hence foreign().
     last_message: orm.Mapped[MessagesTable | None] = orm.relationship(
         "MessagesTable",
         primaryjoin=lambda: sa.and_(
@@ -96,11 +81,7 @@ class ChatMembersTable(BigIntBase):
 class MessagesTable(BigIntBase):
     __tablename__ = "messages"
     __table_args__ = (
-        # No standalone index on chat_id: this composite index already serves every query
-        # that would use one.
         sa.Index("ix_messages_chat_id_id", "chat_id", "id"),
-        # Idempotency is a property of "send this message to this chat" - two different chats
-        # are two different operations, so the key is unique per chat, not table-wide.
         sa.UniqueConstraint("chat_id", "idempotency_key", name="uk_messages_chat_id_idempotency_key"),
     )
 

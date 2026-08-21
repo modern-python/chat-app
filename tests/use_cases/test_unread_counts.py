@@ -117,9 +117,6 @@ async def test_unread_counts_differ_per_chat(
     carol: tables.UsersTable,
     send: SendFixture,
 ) -> None:
-    # A correlated subquery that returned the same count for every chat would still pass a test
-    # that only checks one chat - two chats with two different counts is what proves it's
-    # actually correlated per-chat rather than computed once and reused.
     other_chat, _ = await create_chat_use_case(
         actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[carol.id])
     )
@@ -183,7 +180,6 @@ async def test_marking_read_is_monotonic(
         actor=alice, chat_id=direct_chat.id, data=schemas.MarkReadRequest(last_read_message_id=second.id)
     )
 
-    # An out-of-order/replayed request naming an earlier message must not move the marker back.
     member = await mark_read_use_case(
         actor=alice, chat_id=direct_chat.id, data=schemas.MarkReadRequest(last_read_message_id=first.id)
     )
@@ -206,8 +202,6 @@ async def test_deleting_the_newest_message_updates_preview_and_ordering(
         actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[carol.id])
     )
     await send(alice, direct_chat.id, "direct chat message")
-    # other_chat's only message - deleting it must also cover the "deleting the only message"
-    # case: last_message becomes null and the chat sorts last.
     newest, _ = await send(alice, other_chat.id, "other chat message")
 
     before = await fetch_chats_use_case(actor=alice)

@@ -82,27 +82,19 @@ async def test_direct_chat_is_idempotent_for_the_same_pair(
     assert first.id == second.id
     assert first_created is True
     assert second_created is False
-    # `second` is returned from the early-return, no-write path (existing direct chat found).
-    # Its relationship must still be readable without triggering a lazy load on a closed/rolled-back session.
     assert {member.user_id for member in second.members} == {alice.id, bob.id}
 
 
 async def test_direct_chat_creation_recovers_from_a_concurrent_duplicate_key(
     create_chat_use_case: CreateChatUseCase, alice: tables.UsersTable, bob: tables.UsersTable
 ) -> None:
-    # A real winner: create the direct chat normally first, so a genuinely committed row exists.
     winner, winner_created = await create_chat_use_case(
         actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id])
     )
     assert winner_created is True
-    # Captured now, not read off `winner` after the racer runs: the racer shares this session,
-    # and its own recovery `rollback()` expires every object already loaded on that session -
-    # including `winner` - exactly the hazard the surrounding comments describe, just now
-    # crossing between two calls that happen to share a session instead of within one call.
+    # Captured now: the racer's recovery rollback() expires `winner` on the shared session.
     winner_id = winner.id
 
-    # The losing side of the race, sharing `create_chat_use_case`'s own transaction/session so
-    # the winner row (committed above) is visible to the recovery re-read.
     racer = CreateChatUseCase(
         transaction=create_chat_use_case.transaction,
         chats_repository=_RacingChatsRepository(
@@ -134,9 +126,6 @@ async def test_direct_chat_recovery_raises_if_the_winners_row_is_unreadable(
 async def test_group_chat_reraises_an_unexpected_duplicate_key(
     create_chat_use_case: CreateChatUseCase, alice: tables.UsersTable, bob: tables.UsersTable
 ) -> None:
-    # Group chats have no unique constraint to race on `chats`; a DuplicateKeyError there is
-    # unexpected and must propagate (mapping to the standard 409), not be funnelled into the
-    # direct-chat recovery path.
     broken = CreateChatUseCase(
         transaction=create_chat_use_case.transaction,
         chats_repository=_AlwaysDuplicateChatsRepository(
