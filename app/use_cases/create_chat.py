@@ -57,25 +57,25 @@ class CreateChatUseCase:
                         direct_key=direct_key,
                     )
                 )
-            except DuplicateKeyError:  # pragma: no cover - see comment below
+            except DuplicateKeyError:
                 # Two concurrent requests to open the same direct chat both passed the
                 # fetch_direct_by_key pre-check above and both tried to insert; the loser hits
-                # uq_chats_direct_key here. Roll back and re-read the winner's row outside this
-                # block (same __aexit__ hazard as the comment above). This branch is exercised by
-                # design reasoning and the DuplicateKeyError -> retry-read contract, not by the
-                # test suite: a single shared connection/session fixture cannot express two
-                # concurrent writers, so the race itself is unproven by `just test`.
-                await self.transaction.rollback()  # pragma: no cover
+                # uq_chats_direct_key here. Group chats have no unique constraint on `chats` to
+                # violate, so an unexpected DuplicateKeyError there re-raises and maps to the
+                # standard 409 instead of being funnelled into this direct-chat recovery path.
+                if direct_key is None:
+                    raise
+                # Roll back and re-read the winner's row outside this block (same __aexit__
+                # hazard as the comment above): a `return` from in here without a commit
+                # first would detach whatever `fetch_direct_by_key` loaded, same as before.
+                await self.transaction.rollback()
             else:
                 for user_id in sorted(member_ids):
                     await self.chat_members_repository.create(tables.ChatMembersTable(chat_id=chat.id, user_id=user_id))
                 await self.transaction.commit()
 
-        if chat is None:  # pragma: no cover - see the DuplicateKeyError branch above
-            if direct_key is None:  # pragma: no cover - unreachable: DuplicateKeyError only fires on direct_key
-                msg = "Direct chat creation raced without a direct_key"
-                raise RuntimeError(msg)
-            existing = await self.chats_repository.fetch_direct_by_key(direct_key)
+        if chat is None:
+            existing = await self.chats_repository.fetch_direct_by_key(direct_key)  # ty: ignore[invalid-argument-type]
             if existing is None:  # pragma: no cover - defensive: the unique constraint guarantees a match here
                 msg = "Direct chat creation raced but the resulting row could not be found"
                 raise RuntimeError(msg)

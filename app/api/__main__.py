@@ -5,7 +5,7 @@ from granian.log import LogLevels
 from app.settings import settings
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__":
     granian.Granian(
         target="app.api.app:build_app",
         factory=True,

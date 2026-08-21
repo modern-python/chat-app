@@ -12,8 +12,12 @@ test *args: down && down
 run:
     docker compose run --service-ports api sh -c "sleep 1 && uv run alembic upgrade head && uv run python -m app.api"
 
-migration *args: && down
-    docker compose run api sh -c "sleep 1 && uv run alembic upgrade head && uv run alembic revision --autogenerate {{ args }}"
+migration message: && down
+    # `message` is a single named parameter, shell-quoted via quote() so a multi-word message
+    # survives intact - a variadic *args parameter only ever joins tokens with spaces when
+    # interpolated, losing the quoting boundaries the invoking shell already stripped, so a
+    # multi-word message would otherwise reach sh -c as several disconnected words.
+    docker compose run api sh -c "sleep 1 && uv run alembic upgrade head && uv run alembic revision --autogenerate -m {{ quote(message) }}"
 
 build:
     docker compose build api

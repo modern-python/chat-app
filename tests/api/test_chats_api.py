@@ -23,6 +23,7 @@ async def test_create_group_chat_returns_all_members(client: AsyncClient) -> Non
     )
     assert response.status_code == 201
     assert response.json()["title"] == "Team"
+    assert response.json()["chat_type"] == "group"
     assert len(response.json()["members"]) == 2
 
 
