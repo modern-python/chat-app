@@ -6,7 +6,7 @@ from typing import Any, Self
 import pydantic
 from pydantic import BaseModel, PositiveInt
 
-from app.database.tables import ChatType
+from app.database import tables
 
 
 class Base(BaseModel):
@@ -39,7 +39,7 @@ class User(Base):
 
 
 class CreateChatRequest(Base):
-    chat_type: ChatType
+    chat_type: tables.ChatType
     member_ids: list[PositiveInt] = pydantic.Field(min_length=1)
     title: str | None = pydantic.Field(default=None, max_length=128)
 
@@ -55,7 +55,7 @@ class MarkReadRequest(Base):
 
 class Chat(Base):
     id: PositiveInt
-    chat_type: ChatType
+    chat_type: tables.ChatType
     title: str | None = None
     created_by_id: PositiveInt
 
@@ -89,6 +89,23 @@ class Messages(Collection[Message]):
 class ChatListItem(Chat):
     last_message: Message | None = None
     unread_count: int = 0
+
+    @classmethod
+    def from_row(cls, chat: tables.ChatsTable, *, unread_count: int, last_message: tables.MessagesTable | None) -> Self:
+        # `chat` alone (via Chat's from_attributes=True) has no unread_count/last_message
+        # attributes - those are computed by FetchChatsUseCase, not columns on ChatsTable - so
+        # this validates them together from a dict instead of Chat.model_validate(chat) plus an
+        # unvalidated model_copy(update=...) patch.
+        return cls.model_validate(
+            {
+                "id": chat.id,
+                "chat_type": chat.chat_type,
+                "title": chat.title,
+                "created_by_id": chat.created_by_id,
+                "unread_count": unread_count,
+                "last_message": last_message,
+            }
+        )
 
 
 class Chats(Collection[ChatListItem]):

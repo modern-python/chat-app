@@ -40,18 +40,9 @@ async def list_chats(
     fetch_chats_use_case: NamedDependency[FetchChatsUseCase],
 ) -> schemas.Chats:
     rows: typing.Final = await fetch_chats_use_case(request.user)
-    return schemas.Chats(
-        items=[
-            schemas.ChatListItem.model_validate(row.chat).model_copy(
-                update={
-                    "last_message": schemas.Message.model_validate(row.last_message)
-                    if row.last_message is not None
-                    else None,
-                    "unread_count": row.unread_count,
-                }
-            )
-            for row in rows
-        ]
+    return schemas.Chats.from_models(
+        schemas.ChatListItem.from_row(row.chat, unread_count=row.unread_count, last_message=row.last_message)
+        for row in rows
     )
 
 
