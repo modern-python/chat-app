@@ -33,7 +33,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["chat_id"], ["chats.id"], name=op.f("fk_messages_chat_id_chats")),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], name=op.f("fk_messages_user_id_users")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_messages")),
-        sa.UniqueConstraint("idempotency_key", name=op.f("uq_messages_idempotency_key")),
+        sa.UniqueConstraint("chat_id", "idempotency_key", name="uk_messages_chat_id_idempotency_key"),
     )
     op.create_index("ix_messages_chat_id_id", "messages", ["chat_id", "id"], unique=False)
     op.create_index(op.f("ix_messages_user_id"), "messages", ["user_id"], unique=False)

@@ -4,7 +4,7 @@ import pytest
 from advanced_alchemy.exceptions import DuplicateKeyError
 
 from app.database import tables
-from app.exceptions import PermissionDeniedError, ValidationError
+from app.exceptions import PermissionDeniedError
 from app.repositories.chats_repository import ChatsRepository
 from app.repositories.messages_repository import MessagesRepository
 from app.schemas import api as schemas
@@ -109,21 +109,30 @@ async def test_concurrent_duplicate_key_recovers_the_winners_message(
     assert loser.text == "hi"
 
 
-async def test_reusing_an_idempotency_key_in_a_different_chat_is_rejected(
+async def test_same_idempotency_key_in_two_different_chats_creates_two_messages(
     create_message_use_case: CreateMessageUseCase,
     create_chat_use_case: CreateChatUseCase,
     direct_chat: tables.ChatsTable,
     alice: tables.UsersTable,
     carol: tables.UsersTable,
 ) -> None:
-    # idempotency_key is unique table-wide, not per chat: reusing one across two different
-    # chats is a deterministic client error (not a race), and must not silently hand back the
-    # other chat's message.
+    # Idempotency is scoped per (chat_id, idempotency_key): the key identifies a retry of
+    # "send to this chat", not a retry across the whole table, so reusing it in a different
+    # chat is a second, independent send.
     other_chat, _ = await create_chat_use_case(
         alice, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[carol.id])
     )
     key = uuid.uuid4()
-    await create_message_use_case(alice, direct_chat.id, schemas.SendMessageRequest(idempotency_key=key, text="hi"))
 
-    with pytest.raises(ValidationError):
-        await create_message_use_case(alice, other_chat.id, schemas.SendMessageRequest(idempotency_key=key, text="hi"))
+    first, first_created = await create_message_use_case(
+        alice, direct_chat.id, schemas.SendMessageRequest(idempotency_key=key, text="hi")
+    )
+    second, second_created = await create_message_use_case(
+        alice, other_chat.id, schemas.SendMessageRequest(idempotency_key=key, text="hi")
+    )
+
+    assert first_created is True
+    assert second_created is True
+    assert first.id != second.id
+    assert first.chat_id == direct_chat.id
+    assert second.chat_id == other_chat.id

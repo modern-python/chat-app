@@ -67,13 +67,18 @@ class ChatMembersTable(BigIntBase):
 
 class MessagesTable(BigIntBase):
     __tablename__ = "messages"
-    __table_args__ = (sa.Index("ix_messages_chat_id_id", "chat_id", "id"),)
+    __table_args__ = (
+        # No standalone index on chat_id: this composite index already serves every query
+        # that would use one.
+        sa.Index("ix_messages_chat_id_id", "chat_id", "id"),
+        # Idempotency is a property of "send this message to this chat" - two different chats
+        # are two different operations, so the key is unique per chat, not table-wide.
+        sa.UniqueConstraint("chat_id", "idempotency_key", name="uk_messages_chat_id_idempotency_key"),
+    )
 
-    # No standalone index on chat_id: the (chat_id, id) composite index below already serves
-    # every query that would use one.
     chat_id: orm.Mapped[int] = orm.mapped_column(sa.ForeignKey("chats.id"))
     user_id: orm.Mapped[int | None] = orm.mapped_column(sa.ForeignKey("users.id"), nullable=True, index=True)
-    idempotency_key: orm.Mapped[uuid.UUID] = orm.mapped_column(GUID, unique=True)
+    idempotency_key: orm.Mapped[uuid.UUID] = orm.mapped_column(GUID)
     text: orm.Mapped[str] = orm.mapped_column(sa.String)
     created_at: orm.Mapped[datetime.datetime] = orm.mapped_column(
         DateTimeUTC(timezone=True), default=lambda: datetime.datetime.now(tz=datetime.UTC)
