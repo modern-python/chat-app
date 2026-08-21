@@ -34,13 +34,13 @@ async def list_chats(
     rows: typing.Final = await fetch_chats_use_case(request.user)
     return schemas.Chats(
         items=[
-            schemas.ChatListItem(
-                id=row.chat.id,
-                chat_type=row.chat.chat_type,
-                title=row.chat.title,
-                created_by_id=row.chat.created_by_id,
-                last_message=schemas.Message.model_validate(row.last_message) if row.last_message is not None else None,
-                unread_count=row.unread_count,
+            schemas.ChatListItem.model_validate(row.chat).model_copy(
+                update={
+                    "last_message": schemas.Message.model_validate(row.last_message)
+                    if row.last_message is not None
+                    else None,
+                    "unread_count": row.unread_count,
+                }
             )
             for row in rows
         ]

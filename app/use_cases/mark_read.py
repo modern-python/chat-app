@@ -30,18 +30,14 @@ class MarkReadUseCase:
             msg = "last_read_message_id does not name a message in this chat"
             raise ValidationError(msg)
 
-        # Monotonic: an out-of-order or replayed request naming an earlier message must not move
-        # the marker backwards and resurrect messages that were already marked read.
-        new_last_read_message_id = max(member.last_read_message_id or 0, data.last_read_message_id)
-        if new_last_read_message_id == member.last_read_message_id:
-            return member
-
         async with self.transaction:
-            updated = await self.chat_members_repository.update(
-                tables.ChatMembersTable(id=member.id, last_read_message_id=new_last_read_message_id),
-                item_id=member.id,
-                attribute_names=["last_read_message_id"],
-            )
+            # Monotonic: an out-of-order or replayed request naming an earlier message must not
+            # move the marker backwards and resurrect messages that were already marked read.
+            # The GREATEST(...) that enforces this lives in the UPDATE itself (see
+            # ChatMembersRepository.mark_read) rather than being computed here from `member`'s
+            # already-read value - that would be a read-modify-write race between concurrent
+            # POST /read/ calls.
+            updated = await self.chat_members_repository.mark_read(member.id, data.last_read_message_id)
             await self.transaction.commit()
             # Returned from inside the block, right after commit(): __aexit__ then sees no open
             # transaction (commit ended it) and only closes the session - it does not roll back,

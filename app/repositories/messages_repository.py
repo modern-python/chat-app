@@ -19,6 +19,19 @@ class MessagesRepository(SQLAlchemyAsyncRepositoryService[tables.MessagesTable])
     async def fetch_by_idempotency_key(self, chat_id: int, idempotency_key: uuid.UUID) -> tables.MessagesTable | None:
         return await self.get_one_or_none(chat_id=chat_id, idempotency_key=idempotency_key)
 
+    async def fetch_latest_active(self, chat_id: int) -> tables.MessagesTable | None:
+        """Return the newest non-deleted message in a chat, or None if none remains.
+
+        Used to repoint ChatsTable.last_message_id after a delete removes the current pointer.
+        """
+        messages = await self.get_many(
+            tables.MessagesTable.chat_id == chat_id,
+            tables.MessagesTable.deleted_at.is_(None),
+            LimitOffset(limit=1, offset=0),
+            order_by=[("id", True)],
+        )
+        return messages[0] if messages else None
+
     async def list_page(
         self,
         chat_id: int,
