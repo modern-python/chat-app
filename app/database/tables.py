@@ -10,6 +10,11 @@ from sqlalchemy import orm
 
 
 METADATA: typing.Final = orm_registry.metadata
+# Redirects SQLAlchemy's shared declarative base onto advanced-alchemy's registry metadata so
+# that every model below - which inherits BigIntAuditBase/BigIntBase, themselves built on
+# orm.DeclarativeBase - registers its table on METADATA. Alembic's env.py autogenerates against
+# METADATA directly; without this reassignment, models would register on orm.DeclarativeBase's
+# own separate metadata instead, and autogen would see no tables at all.
 orm.DeclarativeBase.metadata = METADATA
 
 

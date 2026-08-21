@@ -69,18 +69,6 @@ correctly rolled-back one.
 pytest execution, `pytest-randomly`), or before trusting `-k` output from just
 this pair as proof the fixture works.
 
-## Undocumented mutation of a third-party base class
-
-`app/database/tables.py` sets `orm.DeclarativeBase.metadata = METADATA` at
-import time, redirecting SQLAlchemy's shared declarative base onto
-advanced-alchemy's registry so Alembic autogen sees every table. The line has
-no comment explaining why it's there or what breaks if it's removed or
-reordered relative to the model class definitions below it.
-
-**Revisit trigger:** upgrading SQLAlchemy or advanced-alchemy across a major
-version, or the next person who has to figure out why autogen stopped seeing
-a table.
-
 ## Logout does not revoke the JWT
 
 `POST /api/auth/logout/` deletes the cookie but the token itself stays valid

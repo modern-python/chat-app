@@ -95,9 +95,9 @@ parameters; each `app/api/endpoints/*.py` module declares them with
 `BigIntBase`. `app/database/tables.py` shares metadata with
 `orm.DeclarativeBase.metadata` (`METADATA = orm_registry.metadata;
 orm.DeclarativeBase.metadata = METADATA`) so Alembic autogen sees everything —
-this line mutates a third-party base class at import time and has no
-explanatory comment in the source; see `planning/deferred.md`. Repositories
-are `SQLAlchemyAsyncRepositoryService[Model]` with a nested
+this line mutates a third-party base class at import time; see the comment
+above it in the source for why. Repositories are
+`SQLAlchemyAsyncRepositoryService[Model]` with a nested
 `BaseRepository(SQLAlchemyAsyncRepository[Model])`, same shape as the
 template, but every service here is constructed with `auto_commit=False`.
 
