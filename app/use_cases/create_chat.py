@@ -21,7 +21,7 @@ class CreateChatUseCase:
     chat_members_repository: ChatMembersRepository
 
     @postgres_retry
-    async def __call__(self, actor: tables.UsersTable, data: CreateChatRequest) -> tuple[tables.ChatsTable, bool]:
+    async def __call__(self, *, actor: tables.UsersTable, data: CreateChatRequest) -> tuple[tables.ChatsTable, bool]:
         member_ids: typing.Final = {actor.id, *data.member_ids}
         direct_key: str | None = None
 

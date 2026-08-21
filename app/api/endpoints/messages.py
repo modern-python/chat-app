@@ -6,7 +6,7 @@ from litestar.di import NamedDependency
 from litestar.openapi.datastructures import ResponseSpec
 from litestar.params import FromPath, FromQuery
 
-from app.database import tables
+from app.api.auth import AuthedRequest
 from app.schemas import api as schemas
 from app.use_cases.create_message import CreateMessageUseCase
 from app.use_cases.delete_message import DeleteMessageUseCase
@@ -25,10 +25,10 @@ from app.use_cases.fetch_messages import FetchMessagesUseCase
 async def send_message(
     chat_id: FromPath[int],
     data: schemas.SendMessageRequest,
-    request: litestar.Request[tables.UsersTable, typing.Any, typing.Any],
+    request: AuthedRequest,
     create_message_use_case: NamedDependency[CreateMessageUseCase],
 ) -> litestar.Response[schemas.Message]:
-    message, created = await create_message_use_case(request.user, chat_id, data)
+    message, created = await create_message_use_case(actor=request.user, chat_id=chat_id, data=data)
     return litestar.Response(
         content=schemas.Message.model_validate(message),
         status_code=status_codes.HTTP_201_CREATED if created else status_codes.HTTP_200_OK,
@@ -38,7 +38,7 @@ async def send_message(
 @litestar.get("/chats/{chat_id:int}/messages/")
 async def list_messages(  # noqa: PLR0913 - each is a distinct Litestar-bound path/query/DI param
     chat_id: FromPath[int],
-    request: litestar.Request[tables.UsersTable, typing.Any, typing.Any],
+    request: AuthedRequest,
     fetch_messages_use_case: NamedDependency[FetchMessagesUseCase],
     *,
     before_id: FromQuery[int | None] = None,
@@ -46,7 +46,7 @@ async def list_messages(  # noqa: PLR0913 - each is a distinct Litestar-bound pa
     limit: FromQuery[int] = 50,
 ) -> schemas.Messages:
     messages: typing.Final = await fetch_messages_use_case(
-        request.user, chat_id, before_id=before_id, after_id=after_id, limit=limit
+        actor=request.user, chat_id=chat_id, before_id=before_id, after_id=after_id, limit=limit
     )
     return schemas.Messages.from_models(messages)
 
@@ -55,20 +55,20 @@ async def list_messages(  # noqa: PLR0913 - each is a distinct Litestar-bound pa
 async def edit_message(
     message_id: FromPath[int],
     data: schemas.EditMessageRequest,
-    request: litestar.Request[tables.UsersTable, typing.Any, typing.Any],
+    request: AuthedRequest,
     edit_message_use_case: NamedDependency[EditMessageUseCase],
 ) -> schemas.Message:
-    message: typing.Final = await edit_message_use_case(request.user, message_id, data)
+    message: typing.Final = await edit_message_use_case(actor=request.user, message_id=message_id, data=data)
     return schemas.Message.model_validate(message)
 
 
 @litestar.delete("/messages/{message_id:int}/")
 async def delete_message(
     message_id: FromPath[int],
-    request: litestar.Request[tables.UsersTable, typing.Any, typing.Any],
+    request: AuthedRequest,
     delete_message_use_case: NamedDependency[DeleteMessageUseCase],
 ) -> None:
-    await delete_message_use_case(request.user, message_id)
+    await delete_message_use_case(actor=request.user, message_id=message_id)
 
 
 ROUTER: typing.Final = litestar.Router(

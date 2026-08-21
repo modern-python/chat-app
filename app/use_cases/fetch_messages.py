@@ -21,9 +21,9 @@ class FetchMessagesUseCase:
     @postgres_retry
     async def __call__(
         self,
+        *,
         actor: tables.UsersTable,
         chat_id: int,
-        *,
         before_id: int | None = None,
         after_id: int | None = None,
         limit: int = 50,

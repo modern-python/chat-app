@@ -80,9 +80,12 @@ default JWT secret.
 **Dependency injection** (`app/ioc.py`): one `modern_di.Container` built from
 `ALL_GROUPS = [Database, Repositories, UseCases]`, attached via
 `modern_di_litestar.ModernDIPlugin`. Route handlers receive use cases as
-parameters; each `app/api/endpoints/*.py` module declares them with
-`modern_di_litestar.FromDI(...)` (wired centrally in `build_app`'s
-`dependencies=` dict) so Litestar resolves them per-request. Provider scopes:
+parameters typed `NamedDependency[SomeUseCase]`; nothing wires them by hand.
+`build_app` passes `autowired_groups=[ioc.UseCases]` to the plugin, which
+registers one Litestar dependency per provider on that group, named after the
+provider attribute (`create_chat_use_case`, ...). `Database` and `Repositories`
+are deliberately **not** autowired — a route handler has no business resolving
+a session, a transaction or a repository directly. Provider scopes:
 - `Database.database_engine` — app-scoped factory, `cache=` finalizer disposes
   the engine.
 - `Database.database_session` — request-scoped, finalizer closes the session.
@@ -135,7 +138,11 @@ env vars (see `docker-compose.yml`). `api_bootstrapper_config` builds the
   `route_handlers=[auth_endpoints.ROUTER, chats_endpoints.ROUTER,
   messages_endpoints.ROUTER]`. Add a new resource by creating
   `app/api/endpoints/<name>.py`, defining handlers + a `ROUTER`, and adding it
-  to that list plus `build_app`'s `dependencies=` dict for any new use case.
+  to that list. A new use case needs no wiring beyond its `ioc.UseCases`
+  provider: `autowired_groups` exposes it under the provider's own name.
+  Handlers that need the caller annotate the request `app.api.auth.AuthedRequest`
+  and pass `actor=request.user` explicitly; every use case `__call__` is
+  keyword-only.
 - Use cases live in `app/use_cases/`, one `@dataclasses.dataclass(kw_only=True,
   frozen=True, slots=True)` per operation with an async `__call__` decorated
   `@db_retry.postgres_retry`. Shared authorization logic that more than one

@@ -62,7 +62,7 @@ async def test_direct_chat_is_created_with_both_members(
     create_chat_use_case: CreateChatUseCase, alice: tables.UsersTable, bob: tables.UsersTable
 ) -> None:
     chat, created = await create_chat_use_case(
-        alice, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id])
+        actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id])
     )
     assert created is True
     assert chat.chat_type is tables.ChatType.DIRECT
@@ -74,10 +74,10 @@ async def test_direct_chat_is_idempotent_for_the_same_pair(
     create_chat_use_case: CreateChatUseCase, alice: tables.UsersTable, bob: tables.UsersTable
 ) -> None:
     first, first_created = await create_chat_use_case(
-        alice, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id])
+        actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id])
     )
     second, second_created = await create_chat_use_case(
-        bob, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[alice.id])
+        actor=bob, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[alice.id])
     )
     assert first.id == second.id
     assert first_created is True
@@ -92,7 +92,7 @@ async def test_direct_chat_creation_recovers_from_a_concurrent_duplicate_key(
 ) -> None:
     # A real winner: create the direct chat normally first, so a genuinely committed row exists.
     winner, winner_created = await create_chat_use_case(
-        alice, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id])
+        actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id])
     )
     assert winner_created is True
     # Captured now, not read off `winner` after the racer runs: the racer shares this session,
@@ -111,7 +111,7 @@ async def test_direct_chat_creation_recovers_from_a_concurrent_duplicate_key(
         chat_members_repository=create_chat_use_case.chat_members_repository,
     )
     loser, loser_created = await racer(
-        bob, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[alice.id])
+        actor=bob, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[alice.id])
     )
     assert loser_created is False
     assert loser.id == winner_id
@@ -128,7 +128,7 @@ async def test_direct_chat_recovery_raises_if_the_winners_row_is_unreadable(
         chat_members_repository=create_chat_use_case.chat_members_repository,
     )
     with pytest.raises(RuntimeError, match="could not be found"):
-        await broken(alice, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id]))
+        await broken(actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id]))
 
 
 async def test_group_chat_reraises_an_unexpected_duplicate_key(
@@ -145,7 +145,7 @@ async def test_group_chat_reraises_an_unexpected_duplicate_key(
         chat_members_repository=create_chat_use_case.chat_members_repository,
     )
     with pytest.raises(DuplicateKeyError):
-        await broken(alice, schemas.CreateChatRequest(chat_type=tables.ChatType.GROUP, member_ids=[bob.id]))
+        await broken(actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.GROUP, member_ids=[bob.id]))
 
 
 async def test_direct_chat_rejects_more_than_two_members(
@@ -156,8 +156,7 @@ async def test_direct_chat_rejects_more_than_two_members(
 ) -> None:
     with pytest.raises(ValidationError):
         await create_chat_use_case(
-            alice,
-            schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id, carol.id]),
+            actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id, carol.id])
         )
 
 
@@ -168,8 +167,8 @@ async def test_group_chat_includes_the_creator(
     carol: tables.UsersTable,
 ) -> None:
     chat, created = await create_chat_use_case(
-        alice,
-        schemas.CreateChatRequest(chat_type=tables.ChatType.GROUP, member_ids=[bob.id, carol.id], title="Team"),
+        actor=alice,
+        data=schemas.CreateChatRequest(chat_type=tables.ChatType.GROUP, member_ids=[bob.id, carol.id], title="Team"),
     )
     assert created is True
     assert chat.direct_key is None

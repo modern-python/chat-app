@@ -16,7 +16,9 @@ from app.use_cases.fetch_messages import FetchMessagesUseCase
 async def test_author_can_edit(
     edit_message_use_case: EditMessageUseCase, alice_message: tables.MessagesTable, alice: tables.UsersTable
 ) -> None:
-    edited = await edit_message_use_case(alice, alice_message.id, schemas.EditMessageRequest(text="fixed"))
+    edited = await edit_message_use_case(
+        actor=alice, message_id=alice_message.id, data=schemas.EditMessageRequest(text="fixed")
+    )
     assert edited.text == "fixed"
     assert edited.edited_at is not None
 
@@ -26,7 +28,9 @@ async def test_other_member_cannot_edit(
 ) -> None:
     # bob is a member of the chat, not the author - membership alone must not authorize the edit.
     with pytest.raises(PermissionDeniedError):
-        await edit_message_use_case(bob, alice_message.id, schemas.EditMessageRequest(text="nope"))
+        await edit_message_use_case(
+            actor=bob, message_id=alice_message.id, data=schemas.EditMessageRequest(text="nope")
+        )
 
 
 async def _remove_alice_from_chat(
@@ -47,7 +51,9 @@ async def test_author_without_membership_cannot_edit(
     # the membership check does anything the authorship check doesn't already cover.
     await _remove_alice_from_chat(chat_members_repository, alice_message, alice)
     with pytest.raises(PermissionDeniedError):
-        await edit_message_use_case(alice, alice_message.id, schemas.EditMessageRequest(text="nope"))
+        await edit_message_use_case(
+            actor=alice, message_id=alice_message.id, data=schemas.EditMessageRequest(text="nope")
+        )
 
 
 async def test_non_member_cannot_edit(
@@ -56,7 +62,9 @@ async def test_non_member_cannot_edit(
     # carol isn't in direct_chat at all - the membership gate must refuse her before authorship
     # is even considered.
     with pytest.raises(PermissionDeniedError):
-        await edit_message_use_case(carol, alice_message.id, schemas.EditMessageRequest(text="nope"))
+        await edit_message_use_case(
+            actor=carol, message_id=alice_message.id, data=schemas.EditMessageRequest(text="nope")
+        )
 
 
 async def test_editing_a_deleted_message_raises_conflict(
@@ -67,9 +75,11 @@ async def test_editing_a_deleted_message_raises_conflict(
 ) -> None:
     # The author is authorized; the request conflicts with the message's current state, so this
     # is a 409-shaped ConflictError, not a 403-shaped PermissionDeniedError.
-    await delete_message_use_case(alice, alice_message.id)
+    await delete_message_use_case(actor=alice, message_id=alice_message.id)
     with pytest.raises(ConflictError):
-        await edit_message_use_case(alice, alice_message.id, schemas.EditMessageRequest(text="nope"))
+        await edit_message_use_case(
+            actor=alice, message_id=alice_message.id, data=schemas.EditMessageRequest(text="nope")
+        )
 
 
 async def test_author_can_delete(
@@ -78,7 +88,7 @@ async def test_author_can_delete(
     alice_message: tables.MessagesTable,
     alice: tables.UsersTable,
 ) -> None:
-    await delete_message_use_case(alice, alice_message.id)
+    await delete_message_use_case(actor=alice, message_id=alice_message.id)
     stored = await messages_repository.get_one(id=alice_message.id)
     assert stored.deleted_at is not None
 
@@ -88,7 +98,7 @@ async def test_other_member_cannot_delete(
 ) -> None:
     # Same distinction as edit: bob is a member of the chat but not the author.
     with pytest.raises(PermissionDeniedError):
-        await delete_message_use_case(bob, alice_message.id)
+        await delete_message_use_case(actor=bob, message_id=alice_message.id)
 
 
 async def test_author_without_membership_cannot_delete(
@@ -100,7 +110,7 @@ async def test_author_without_membership_cannot_delete(
     # Same distinction as edit.
     await _remove_alice_from_chat(chat_members_repository, alice_message, alice)
     with pytest.raises(PermissionDeniedError):
-        await delete_message_use_case(alice, alice_message.id)
+        await delete_message_use_case(actor=alice, message_id=alice_message.id)
 
 
 async def test_non_member_cannot_delete(
@@ -108,7 +118,7 @@ async def test_non_member_cannot_delete(
 ) -> None:
     # Same distinction as edit: carol isn't in direct_chat at all.
     with pytest.raises(PermissionDeniedError):
-        await delete_message_use_case(carol, alice_message.id)
+        await delete_message_use_case(actor=carol, message_id=alice_message.id)
 
 
 async def test_deleting_an_already_deleted_message_is_idempotent(
@@ -117,10 +127,10 @@ async def test_deleting_an_already_deleted_message_is_idempotent(
     alice_message: tables.MessagesTable,
     alice: tables.UsersTable,
 ) -> None:
-    await delete_message_use_case(alice, alice_message.id)
+    await delete_message_use_case(actor=alice, message_id=alice_message.id)
     first_deleted_at = (await messages_repository.get_one(id=alice_message.id)).deleted_at
 
-    await delete_message_use_case(alice, alice_message.id)
+    await delete_message_use_case(actor=alice, message_id=alice_message.id)
 
     stored = await messages_repository.get_one(id=alice_message.id)
     assert stored.deleted_at == first_deleted_at
@@ -136,10 +146,12 @@ async def test_deleted_message_disappears_from_listing(
     # A second, undeleted message proves the listing filters *deleted* messages specifically -
     # an empty result here would prove nothing, since the chat would just be empty either way.
     other, _ = await create_message_use_case(
-        alice, alice_message.chat_id, schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="still here")
+        actor=alice,
+        chat_id=alice_message.chat_id,
+        data=schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="still here"),
     )
 
-    await delete_message_use_case(alice, alice_message.id)
-    page = await fetch_messages_use_case(alice, alice_message.chat_id)
+    await delete_message_use_case(actor=alice, message_id=alice_message.id)
+    page = await fetch_messages_use_case(actor=alice, chat_id=alice_message.chat_id)
 
     assert [message.id for message in page] == [other.id]

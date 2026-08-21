@@ -14,7 +14,7 @@ class FetchChatUseCase:
     chat_members_repository: ChatMembersRepository
 
     @postgres_retry
-    async def __call__(self, actor: tables.UsersTable, chat_id: int) -> tables.ChatsTable:
+    async def __call__(self, *, actor: tables.UsersTable, chat_id: int) -> tables.ChatsTable:
         if not await self.chat_members_repository.is_member(chat_id, actor.id):
             msg = "Not a member of this chat"
             raise PermissionDeniedError(msg)

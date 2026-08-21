@@ -60,7 +60,7 @@ async def direct_chat(
     create_chat_use_case: CreateChatUseCase, alice: tables.UsersTable, bob: tables.UsersTable
 ) -> tables.ChatsTable:
     chat, _ = await create_chat_use_case(
-        alice, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id])
+        actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id])
     )
     return chat
 
@@ -70,7 +70,7 @@ async def alice_message(
     create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: tables.UsersTable
 ) -> tables.MessagesTable:
     message, _ = await create_message_use_case(
-        alice, direct_chat.id, schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hello")
+        actor=alice, chat_id=direct_chat.id, data=schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hello")
     )
     return message
 
@@ -83,7 +83,7 @@ def send(
 
     async def _send(actor: tables.UsersTable, chat_id: int, text: str) -> tuple[tables.MessagesTable, bool]:
         return await create_message_use_case(
-            actor, chat_id, schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text=text)
+            actor=actor, chat_id=chat_id, data=schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text=text)
         )
 
     return _send

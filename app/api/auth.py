@@ -1,6 +1,7 @@
 import datetime
 import typing
 
+import litestar
 import modern_di_litestar
 from litestar.config.app import AppConfig
 from litestar.connection import ASGIConnection
@@ -11,6 +12,11 @@ from app import ioc
 from app.database import resources as database_resources
 from app.database import tables
 from app.settings import settings
+
+
+# Every authenticated handler annotates its request with this; `request.user` is a UsersTable
+# because retrieve_user_handler below is what populates it.
+type AuthedRequest = litestar.Request[tables.UsersTable, Token, typing.Any]
 
 
 async def retrieve_user_handler(token: Token, connection: ASGIConnection) -> tables.UsersTable | None:
