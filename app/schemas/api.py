@@ -4,6 +4,8 @@ from typing import Any, Self
 import pydantic
 from pydantic import BaseModel, PositiveInt
 
+from app.database.tables import ChatType
+
 
 class Base(BaseModel):
     model_config = pydantic.ConfigDict(from_attributes=True)
@@ -32,3 +34,25 @@ class User(Base):
     id: PositiveInt
     username: str
     display_name: str
+
+
+class CreateChatRequest(Base):
+    chat_type: ChatType
+    member_ids: list[PositiveInt] = pydantic.Field(min_length=1)
+    title: str | None = pydantic.Field(default=None, max_length=128)
+
+
+class ChatMember(Base):
+    user_id: PositiveInt
+    last_read_message_id: PositiveInt | None = None
+
+
+class Chat(Base):
+    id: PositiveInt
+    chat_type: ChatType
+    title: str | None = None
+    created_by_id: PositiveInt
+
+
+class ChatDetail(Chat):
+    members: list[ChatMember]

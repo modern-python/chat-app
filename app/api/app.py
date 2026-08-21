@@ -14,9 +14,12 @@ from app import ioc
 from app.api import exception_handlers
 from app.api.auth import JWTCookieAuthPlugin
 from app.api.endpoints import auth as auth_endpoints
+from app.api.endpoints import chats as chats_endpoints
 from app.exceptions import PermissionDeniedError
 from app.settings import settings
 from app.use_cases.authenticate_user import AuthenticateUserUseCase
+from app.use_cases.create_chat import CreateChatUseCase
+from app.use_cases.fetch_chat import FetchChatUseCase
 from app.use_cases.register_user import RegisterUserUseCase
 
 
@@ -31,11 +34,13 @@ def build_app() -> litestar.Litestar:
                 PermissionDeniedError: exception_handlers.permission_denied_handler,
                 DuplicateKeyError: exception_handlers.duplicate_key_error_handler,
             },
-            route_handlers=[auth_endpoints.ROUTER],
+            route_handlers=[auth_endpoints.ROUTER, chats_endpoints.ROUTER],
             plugins=[modern_di_litestar.ModernDIPlugin(di_container), JWTCookieAuthPlugin()],
             dependencies={
                 "register_user_use_case": modern_di_litestar.FromDI(RegisterUserUseCase),
                 "authenticate_user_use_case": modern_di_litestar.FromDI(AuthenticateUserUseCase),
+                "create_chat_use_case": modern_di_litestar.FromDI(CreateChatUseCase),
+                "fetch_chat_use_case": modern_di_litestar.FromDI(FetchChatUseCase),
             },
             request_max_body_size=settings.request_max_body_size,
         ),
