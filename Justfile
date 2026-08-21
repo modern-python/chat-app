@@ -31,3 +31,11 @@ lint:
     uv run ruff format .
     uv run ruff check . --fix
     uv run ty check
+
+# Print the planning change index (flat, newest-first) to stdout.
+index:
+    uv run python planning/index.py
+
+# Validate planning changes + decisions (frontmatter, lanes, spec links); CI runs this.
+check-planning:
+    uv run python planning/index.py --check
