@@ -16,7 +16,7 @@ services:
       - SERVICE_DEBUG=true
       - SERVICE_ENVIRONMENT=ci
       - DB_DSN=postgresql+asyncpg://postgres:password@db/postgres
-      - JWT_SECRET=insecure-ci-secret
+      - JWT_SECRET=insecure-ci-secret-do-not-use-in-prod
     command: ["uv", "run", "python", "-m", "app.api"]
 
   db:

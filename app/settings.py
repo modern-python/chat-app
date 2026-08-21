@@ -1,6 +1,12 @@
+import typing
+
 import pydantic_settings
 from lite_bootstrap import LitestarConfig
 from sqlalchemy.engine.url import URL, make_url
+
+
+# >= 32 bytes: PyJWT warns (InsecureKeyLengthWarning) below that for HS256.
+INSECURE_JWT_SECRET: typing.Final = "insecure-local-secret-do-not-use-in-prod"
 
 
 class Settings(pydantic_settings.BaseSettings):
@@ -18,8 +24,11 @@ class Settings(pydantic_settings.BaseSettings):
     app_host: str = "0.0.0.0"  # noqa: S104
     app_port: int = 8000
 
-    jwt_secret: str = "insecure-local-secret"
+    jwt_secret: str = INSECURE_JWT_SECRET
     jwt_lifetime_seconds: int = 60 * 60 * 24 * 7
+    # Litestar leaves this unset by default. Production MUST set this to True (it requires
+    # serving over HTTPS); left False here so local http:// development still gets the cookie.
+    jwt_cookie_secure: bool = False
 
     opentelemetry_endpoint: str = ""
     sentry_dsn: str = ""
@@ -32,6 +41,16 @@ class Settings(pydantic_settings.BaseSettings):
     cors_exposed_headers: list[str] = []
 
     request_max_body_size: int = 1024 * 1024
+
+    def ensure_jwt_secret_is_configured(self) -> None:
+        # The whole auth boundary (Task 3) is a token signed with jwt_secret: with the shipped
+        # default, anyone can forge a token for any user.id. Only "local" may run with it.
+        if self.service_environment != "local" and self.jwt_secret == INSECURE_JWT_SECRET:
+            message = (
+                f"jwt_secret is still the insecure default while service_environment="
+                f"{self.service_environment!r}; set the JWT_SECRET environment variable."
+            )
+            raise RuntimeError(message)
 
     @property
     def db_dsn_parsed(self) -> URL:

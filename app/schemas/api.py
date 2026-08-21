@@ -1,4 +1,5 @@
-from typing import Self
+from collections.abc import Iterable
+from typing import Any, Self
 
 import pydantic
 from pydantic import BaseModel, PositiveInt
@@ -12,8 +13,8 @@ class Collection[T: Base](Base):
     items: list[T]
 
     @classmethod
-    def from_models(cls, objects: object) -> Self:
-        return cls.model_validate({"items": list(objects)})  # ty: ignore[invalid-argument-type]
+    def from_models(cls, objects: Iterable[Any]) -> Self:
+        return cls.model_validate({"items": list(objects)})
 
 
 class RegisterRequest(Base):

@@ -1,6 +1,10 @@
 from app.schemas.api import Collection, User
+from tests.factories import UserFactory
 
 
 def test_collection_builds_from_models() -> None:
-    collection = Collection[User].from_models([{"id": 1, "username": "alice", "display_name": "Alice"}])
+    # Every real caller passes SQLAlchemy ORM rows, which is why `Base` sets
+    # from_attributes=True; a dict here wouldn't exercise the attribute-access path.
+    user = UserFactory.build(id=1, username="alice", display_name="Alice")
+    collection = Collection[User].from_models([user])
     assert collection.items == [User(id=1, username="alice", display_name="Alice")]
