@@ -8,6 +8,8 @@ from litestar.params import FromPath, FromQuery
 from app.database import tables
 from app.schemas import api as schemas
 from app.use_cases.create_message import CreateMessageUseCase
+from app.use_cases.delete_message import DeleteMessageUseCase
+from app.use_cases.edit_message import EditMessageUseCase
 from app.use_cases.fetch_messages import FetchMessagesUseCase
 
 
@@ -41,4 +43,26 @@ async def list_messages(  # noqa: PLR0913 - each is a distinct Litestar-bound pa
     return schemas.Messages.from_models(messages)
 
 
-ROUTER: typing.Final = litestar.Router(path="/api", route_handlers=[send_message, list_messages])
+@litestar.patch("/messages/{message_id:int}/")
+async def edit_message(
+    message_id: FromPath[int],
+    data: schemas.EditMessageRequest,
+    request: litestar.Request[tables.UsersTable, typing.Any, typing.Any],
+    edit_message_use_case: NamedDependency[EditMessageUseCase],
+) -> schemas.Message:
+    message: typing.Final = await edit_message_use_case(request.user, message_id, data)
+    return schemas.Message.model_validate(message)
+
+
+@litestar.delete("/messages/{message_id:int}/")
+async def delete_message(
+    message_id: FromPath[int],
+    request: litestar.Request[tables.UsersTable, typing.Any, typing.Any],
+    delete_message_use_case: NamedDependency[DeleteMessageUseCase],
+) -> None:
+    await delete_message_use_case(request.user, message_id)
+
+
+ROUTER: typing.Final = litestar.Router(
+    path="/api", route_handlers=[send_message, list_messages, edit_message, delete_message]
+)

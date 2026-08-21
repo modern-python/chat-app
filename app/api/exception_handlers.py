@@ -3,7 +3,7 @@ import typing
 import litestar
 from litestar import status_codes
 
-from app.exceptions import PermissionDeniedError, ValidationError
+from app.exceptions import ConflictError, PermissionDeniedError, ValidationError
 
 
 if typing.TYPE_CHECKING:
@@ -49,4 +49,12 @@ def validation_error_handler(_: object, exc: ValidationError) -> litestar.Respon
         media_type=litestar.MediaType.JSON,
         content={"detail": str(exc) or "Validation error"},
         status_code=status_codes.HTTP_400_BAD_REQUEST,
+    )
+
+
+def conflict_error_handler(_: object, exc: ConflictError) -> litestar.Response[dict[str, typing.Any]]:
+    return litestar.Response(
+        media_type=litestar.MediaType.JSON,
+        content={"detail": str(exc) or "Conflict"},
+        status_code=status_codes.HTTP_409_CONFLICT,
     )

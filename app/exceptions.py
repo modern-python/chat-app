@@ -8,3 +8,7 @@ class PermissionDeniedError(ChatAppError):
 
 class ValidationError(ChatAppError):
     """Raised when a request is well-formed but violates a domain invariant."""
+
+
+class ConflictError(ChatAppError):
+    """Raised when an otherwise-authorized request conflicts with the resource's current state."""

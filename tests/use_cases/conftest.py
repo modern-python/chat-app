@@ -1,4 +1,5 @@
 import typing
+import uuid
 
 import modern_di
 import pytest
@@ -9,6 +10,7 @@ from app import ioc, security
 from app.database import tables
 from app.schemas import api as schemas
 from app.use_cases.create_chat import CreateChatUseCase
+from app.use_cases.create_message import CreateMessageUseCase
 from tests.factories import UserFactory
 
 
@@ -61,3 +63,13 @@ async def direct_chat(
         alice, schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id])
     )
     return chat
+
+
+@pytest.fixture
+async def alice_message(
+    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: tables.UsersTable
+) -> tables.MessagesTable:
+    message, _ = await create_message_use_case(
+        alice, direct_chat.id, schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hello")
+    )
+    return message

@@ -65,6 +65,10 @@ class SendMessageRequest(Base):
     text: str = pydantic.Field(min_length=1, max_length=4000)
 
 
+class EditMessageRequest(Base):
+    text: str = pydantic.Field(min_length=1, max_length=4000)
+
+
 class Message(Base):
     id: PositiveInt
     chat_id: PositiveInt
