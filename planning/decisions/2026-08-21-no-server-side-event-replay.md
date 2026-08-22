@@ -1,5 +1,4 @@
 ---
-status: accepted
 summary: Reconnect recovery uses channel history plus a REST resync; no durable per-user event log honouring Last-Event-ID.
 ---
 

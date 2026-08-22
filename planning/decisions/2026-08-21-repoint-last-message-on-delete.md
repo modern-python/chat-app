@@ -1,5 +1,4 @@
 ---
-status: accepted
 summary: Soft-deleting a chat's newest message repoints chats.last_message_id in the same transaction, rather than filtering the deleted row out of the listing preview.
 ---
 

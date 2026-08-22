@@ -1,5 +1,4 @@
 ---
-status: accepted
 summary: Event fan-out uses one Redis channel per user; per-chat and hybrid topologies rejected.
 ---
 

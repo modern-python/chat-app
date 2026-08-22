@@ -1,5 +1,4 @@
 ---
-status: accepted
 summary: Editing and deleting a message requires chat membership as well as authorship; the check order is existence, membership, authorship.
 ---
 
@@ -31,7 +30,8 @@ author of a message in a chat she is no longer in.
 A non-member still learns whether a message id exists, because the message must
 be loaded before its chat is known. That residual is accepted deliberately and
 mirrors the decision that `FetchChatUseCase` returns `403` rather than
-pretending the chat does not exist. See `planning/deferred.md`.
+pretending the chat does not exist. See
+`planning/deferred/2026-08-21-message-id-existence-404-vs-403.md`.
 
 ## Revisit trigger
 

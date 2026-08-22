@@ -1,5 +1,4 @@
 ---
-status: accepted
 summary: Direct-chat creation and message send recover from a unique-constraint violation and re-read, rather than trusting a pre-check.
 ---
 

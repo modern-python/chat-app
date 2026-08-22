@@ -1,5 +1,4 @@
 ---
-status: accepted
 summary: Coverage exclusions are reserved for code pytest structurally cannot execute; unreachable-in-production branches are tested through repository seams instead.
 ---
 

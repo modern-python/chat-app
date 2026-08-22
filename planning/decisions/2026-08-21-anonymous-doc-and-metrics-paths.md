@@ -1,5 +1,4 @@
 ---
-status: accepted
 summary: The auth exclude list carries four anchored prefixes — /docs, /health, /static and /metrics — and nothing else.
 ---
 

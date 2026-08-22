@@ -1,5 +1,4 @@
 ---
-status: accepted
 summary: The session cookie's Secure flag comes from an explicit jwt_cookie_secure setting, not from inspecting service_environment.
 ---
 

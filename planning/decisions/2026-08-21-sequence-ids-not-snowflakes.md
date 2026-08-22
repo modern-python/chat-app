@@ -1,5 +1,4 @@
 ---
-status: accepted
 summary: Message ids are a Postgres BigInt identity sequence, not snowflake ids.
 ---
 

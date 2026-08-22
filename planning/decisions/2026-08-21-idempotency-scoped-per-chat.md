@@ -1,5 +1,4 @@
 ---
-status: accepted
 summary: Message idempotency is scoped to (chat_id, idempotency_key), not to the key alone.
 ---
 

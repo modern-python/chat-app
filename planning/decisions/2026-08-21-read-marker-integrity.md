@@ -1,5 +1,4 @@
 ---
-status: accepted
 summary: The read marker advances only to a message in its own chat, and advances atomically via GREATEST so it can never move backwards.
 ---
 
