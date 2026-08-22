@@ -48,12 +48,13 @@ Before writing a line anywhere:
 
 This repo kept an `architecture/` directory of capability pages until 2026-08-22
 and removed it. The pages had become a second telling of `decisions/` — the
-twelve decision files referenced them zero times, while the pages re-narrated
-the decisions at length — and one had gone silently wrong: `chats.md` still
-described `chat_type` as a non-native enum months after #4 converted it to a
-native Postgres enum, because the convention's promotion rule was a habit with
-nothing enforcing it. A prose copy of a fact the code already owns goes stale in
-the copy nobody edits. The absence of the directory is the mechanism.
+decision files referenced them zero times, while the pages re-narrated the
+decisions at length — and one had gone silently wrong: `chats.md` still
+described `chat_type` as a non-native enum after #4 converted it to a native
+Postgres enum, and nothing caught it, because the convention's promotion rule
+was a habit with nothing enforcing it. A prose copy of a fact the code already
+owns goes stale in the copy nobody edits. The absence of the directory is the
+mechanism.
 
 `decisions/` and `INVARIANT:` docstrings inherit the same risk from the other
 direction: nothing prunes a record once its call is settled. Keeping both lean
@@ -117,8 +118,9 @@ Against upstream convention 2.2.0:
 5. `index.py` is edited to match that schema, and both `index.py` and `links.py`
    drop the canonical `# ruff: noqa: INP001` line — this repo ignores `INP`
    globally, so the directive is an unused `noqa` and fails `RUF100`.
-6. There is no `lint-ci` recipe; CI inlines its lint steps, so `links.py` is
-   wired into the workflow's `lint` job rather than a recipe.
+6. There is no `lint-ci` recipe; CI inlines its lint steps, so `links.py` runs
+   as a step in the workflow's `lint` job rather than via a recipe CI calls.
+   `just check-links` exists for running it locally.
 
 Deviations 1–5 match `modern-di`'s practice. Applying a future convention
 version will revert the edits in 5 — re-apply them.

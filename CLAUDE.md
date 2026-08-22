@@ -26,7 +26,7 @@ template breaks the transaction model or the DI wiring.
    `chats.last_message_id` update together. This exists because a single
    operation can span more than one repository write and they must succeed or
    fail as a unit; giving that back to individually auto-committing
-   repositories would make that impossible. This creates two hazards around
+   repositories would make that impossible. This creates a hazard around
    `Transaction.__aexit__`'s unconditional rollback-on-open-transaction
    behavior (returning a loaded ORM object from inside an uncommitted `async
    with self.transaction:` block detaches it).
