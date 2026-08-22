@@ -24,9 +24,9 @@ stops "why didn't you also fix X" in review and six months from now.
 
 ## Verification
 
-How you know it works: the tests added, `just test` (109 passing, 100% line
-coverage, the gate), `just test-migrations`, `just lint`. State the numbers, not
-"tested".
+How you know it works: the tests added, `just test` (give the pass count and the
+coverage your run reported — 100% line coverage is the gate),
+`just test-migrations`, `just lint`. State the numbers, not "tested".
 
 ---
 

@@ -38,9 +38,10 @@ only covers what isn't obvious from the recipe names.
 
 Almost everything runs through Docker Compose: the app and Postgres come up
 together, and running tests/migrations outside Docker is **not** the
-supported path (`just install` and `just lint` are the exceptions — they run
-on the host). Inside the container, raw commands look like `uv run pytest
-...`, `uv run alembic ...`.
+supported path (`just install`, `just lint`, `just index`, `just
+check-planning` and `just check-links` are the exceptions — they run on the
+host). Inside the container, raw commands look like `uv run pytest ...`, `uv
+run alembic ...`.
 
 - `just test` cycles the DB (downgrade to `base`, upgrade to `head`) before
   pytest and tears the stack down before and after. Pass pytest args through,
@@ -191,9 +192,9 @@ env vars (see `docker-compose.yml`). `api_bootstrapper_config` builds the
 - Domain exceptions (`app/exceptions.py`: `PermissionDeniedError`,
   `ValidationError`, `ConflictError`) are registered as handlers in
   `build_app`'s `exception_handlers` dict alongside the `advanced_alchemy`
-  exceptions (`NotFoundError`, `DuplicateKeyError`, `ForeignKeyError`). Full
-  mapping table and the one deliberate exception (login's `401` via Litestar's
-  own `NotAuthorizedException`) are in
+  exceptions (`NotFoundError`, `DuplicateKeyError`, `ForeignKeyError`). Every
+  mapping, and why login's `401` deliberately uses Litestar's own
+  `NotAuthorizedException` instead, is described in
   `planning/decisions/2026-08-21-domain-error-vocabulary.md`.
 - **Comments.** None, unless the code would read as a bug without one; then a
   single line. Rationale, design decisions and "why not X" belong in

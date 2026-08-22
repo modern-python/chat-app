@@ -14,8 +14,9 @@ process. Upstream:
 
 `rchat`'s `PruningChannelsPlugin` overrides the public `unsubscribe` to drop
 empty entries, so this one needs no private access. Still not shipped, for
-symmetry with the item above and because the growth is bounded by distinct users
-in a demo.
+symmetry with
+[2026-08-21-litestar-channels-subscriber-orphaned.md](2026-08-21-litestar-channels-subscriber-orphaned.md)
+and because the growth is bounded by distinct users in a demo.
 
 ## Revisit trigger
 

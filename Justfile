@@ -43,7 +43,6 @@ index:
 check-planning:
     uv run python planning/index.py --check
 
-# Check every relative Markdown link and heading anchor. Nothing else validates the
-# planning/ tree - this repo has no site builder at all.
+# Check every relative Markdown link and heading anchor in the repo.
 check-links:
     uv run python planning/links.py

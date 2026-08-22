@@ -30,13 +30,14 @@ delete the template and ship a conventional-commit title.
 
 ## Where a fact goes
 
-Three homes, one owner each:
+Four homes, one owner each:
 
 | Home | Holds |
 |---|---|
 | `app/` | anything readable from the module — the default |
 | a named test | an **invariant**: must stay true, and a change could silently break it |
 | `decisions/` | a rejected alternative, with the reasoning that would otherwise be re-litigated |
+| `deferred/` | real work, not scheduled, with a revisit trigger |
 
 Before writing a line anywhere:
 
@@ -123,4 +124,6 @@ Against upstream convention 2.2.0:
    `just check-links` exists for running it locally.
 
 Deviations 1–5 match `modern-di`'s practice. Applying a future convention
-version will revert the edits in 5 — re-apply them.
+version runs upstream's `APPLY.md`, which copies `index.py` and `links.py` over
+any local version by design — that reverts the edits in 5, so re-apply them
+afterwards.
