@@ -8,8 +8,9 @@ The suite runs at `--cov-fail-under=100`. Two mechanisms can exempt code, and
 each has a narrow warrant:
 
 - `[tool.coverage.run] omit` is reserved for files the default pytest run never
-  imports at all. The live list is `omit` in `pyproject.toml`, where each entry
-  states its own reason; enumerating it here would be a copy that goes stale.
+  imports at all. The live list is `omit` in `pyproject.toml`, which carries an
+  inline reason wherever the exclusion is not evident from the path itself;
+  enumerating it here would be a copy that goes stale.
 - `# pragma: no cover` is not used anywhere in `app/`, `tests/` or
   `migrations/`.
 
