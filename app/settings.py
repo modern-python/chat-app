@@ -13,6 +13,7 @@ class Settings(pydantic_settings.BaseSettings):
     service_name: str = "chat-app"
     service_version: str = "1.0.0"
     service_environment: str = "local"
+    # echo/echo_pool log bound parameters, including password_hash on every registration.
     service_debug: bool = False
     log_level: str = "info"
 
