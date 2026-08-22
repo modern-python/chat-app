@@ -149,10 +149,11 @@ back. `app`/`client` fixtures build the real app and run it through
 `modern_di_pytest.expose(ioc.Repositories, ioc.UseCases,
 container_fixture="request_container")` (`tests/use_cases/conftest.py`)
 exposes every repository/use case provider as a same-named pytest fixture —
-the template predates this and hand-assembles dependencies instead. Full
-detail, including the race-simulation pattern used to test the concurrent-retry
-paths without a second real connection, is in the `INVARIANT:` docstrings on
-`tests/use_cases/test_create_chat.py` and `tests/use_cases/test_create_message.py`.
+the template predates this and hand-assembles dependencies instead. The
+race-simulation pattern used to test the concurrent-retry paths without a second
+real connection is the `_Racing*Repository` classes in
+`tests/use_cases/test_create_chat.py` and `tests/use_cases/test_create_message.py`;
+the invariant each one pins is in the `INVARIANT:` docstring on the test that uses it.
 
 **Migrations**: `migrations/env.py` reads the shared `METADATA` and rewrites
 the DSN driver from `postgresql+asyncpg` → `postgresql` (Alembic uses sync
