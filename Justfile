@@ -35,10 +35,14 @@ lint:
     uv run ruff check . --fix
     uv run ty check
 
-# Print the planning change index (flat, newest-first) to stdout.
+# Print the planning index (deferred, then decisions) to stdout.
 index:
     uv run python planning/index.py
 
-# Validate planning changes + decisions (frontmatter, lanes, spec links); CI runs this.
+# Validate planning/deferred/ + planning/decisions/ frontmatter and naming; CI runs this.
 check-planning:
     uv run python planning/index.py --check
+
+# Check every relative Markdown link and heading anchor in the repo.
+check-links:
+    uv run python planning/links.py

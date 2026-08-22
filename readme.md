@@ -47,8 +47,8 @@ domain. Nothing shows them composed under load-bearing decisions — a
 transaction that must span two writes, a unique constraint that two concurrent
 requests can both hit, a count that must not cost a row per event. This repo
 answers that with a domain that actually needs it. See
-`planning/changes/2026-08-21.01-chat-app-bootstrap.md` for the full design and
-`architecture/` for the capabilities as shipped.
+[PR #1](https://github.com/modern-python/chat-app/pull/1) for the full design
+and `planning/decisions/` for the calls taken along the way.
 
 | Pattern | Where to look |
 |---|---|

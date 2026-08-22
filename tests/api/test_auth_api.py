@@ -94,6 +94,12 @@ async def test_me_rejects_tampered_cookie(client: AsyncClient) -> None:
 
 @pytest.mark.usefixtures("db_session")
 async def test_me_rejects_token_with_non_numeric_subject(client: AsyncClient) -> None:
+    """INVARIANT: a token whose subject is not an integer yields 401, not a 500.
+
+    Broken by letting int(token.sub) raise out of retrieve_user_handler — it runs
+    inside auth middleware, so an uncaught ValueError there is an unhandled server
+    error on a request an attacker fully controls the token for.
+    """
     token = jwt_cookie_auth.create_token(identifier="not-a-number")
     client.cookies.set(jwt_cookie_auth.key, token)
     response = await client.get("/api/auth/me/")

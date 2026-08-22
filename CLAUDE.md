@@ -26,8 +26,7 @@ template breaks the transaction model or the DI wiring.
    `chats.last_message_id` update together. This exists because a single
    operation can span more than one repository write and they must succeed or
    fail as a unit; giving that back to individually auto-committing
-   repositories would make that impossible. See `architecture/messages.md`
-   and `architecture/chats.md` for the two hazards this creates around
+   repositories would make that impossible. This creates a hazard around
    `Transaction.__aexit__`'s unconditional rollback-on-open-transaction
    behavior (returning a loaded ORM object from inside an uncommitted `async
    with self.transaction:` block detaches it).
@@ -39,9 +38,10 @@ only covers what isn't obvious from the recipe names.
 
 Almost everything runs through Docker Compose: the app and Postgres come up
 together, and running tests/migrations outside Docker is **not** the
-supported path (`just install` and `just lint` are the exceptions — they run
-on the host). Inside the container, raw commands look like `uv run pytest
-...`, `uv run alembic ...`.
+supported path (`just install`, `just lint`, `just index`, `just
+check-planning` and `just check-links` are the exceptions — they run on the
+host). Inside the container, raw commands look like `uv run pytest ...`, `uv
+run alembic ...`.
 
 - `just test` cycles the DB (downgrade to `base`, upgrade to `head`) before
   pytest and tears the stack down before and after. Pass pytest args through,
@@ -66,11 +66,33 @@ on the host). Inside the container, raw commands look like `uv run pytest
 - `just lint` runs `eof-fixer`, `ruff format`, `ruff check --fix`, then `ty
   check` — this project uses `ty`, not mypy; suppress with `# ty:
   ignore[<rule>]` (not `# type: ignore`).
-- `just index` prints the planning change/decision listing; `just
-  check-planning` validates `planning/changes/` and `planning/decisions/`
-  frontmatter (CI-equivalent check, run before pushing a planning change).
+- `just index` prints the deferred/decision listing; `just check-planning`
+  validates `planning/deferred/` and `planning/decisions/` frontmatter (and
+  that every deferred item carries a revisit trigger); `just check-links`
+  validates every relative Markdown link and heading anchor in the repo.
 
 Python is 3.14, dependencies managed by `uv`. The API is exposed on `:8000`.
+
+## Workflow
+
+**The spec for a change is its PR body**, not a committed file.
+`.github/PULL_REQUEST_TEMPLATE.md` carries the shape (why, design, non-goals,
+verification); it is reviewed with the diff. There is no change file and no lane
+to choose. A trivial PR (typo, dep bump, formatter) deletes the template and
+ships a conventional-commit title.
+
+Two things outlive the PR and are committed under `planning/`: an alternative
+**rejected** with reasoning goes to `planning/decisions/`, and real work **not
+scheduled** goes to `planning/deferred/` (self-contained, with a revisit
+trigger). There is no capability-page home — the living truth about behaviour is
+the code and its `INVARIANT:`-marked tests, and a behaviour change is reviewed
+with the diff, not promoted to a page. See `planning/README.md` for the full
+convention, including the admission check that decides where a given fact
+belongs.
+
+An invariant is a test whose name is the claim, with a docstring opening
+`INVARIANT:` and a second paragraph naming what breaks it. Applied to new
+claims; the existing suite is not retrofitted.
 
 ## Architecture
 
@@ -128,10 +150,11 @@ back. `app`/`client` fixtures build the real app and run it through
 `modern_di_pytest.expose(ioc.Repositories, ioc.UseCases,
 container_fixture="request_container")` (`tests/use_cases/conftest.py`)
 exposes every repository/use case provider as a same-named pytest fixture —
-the template predates this and hand-assembles dependencies instead. Full
-detail, including the race-simulation pattern used to test the
-concurrent-retry paths without a second real connection, is in
-`architecture/testing.md`.
+the template predates this and hand-assembles dependencies instead. The
+race-simulation pattern used to test the concurrent-retry paths without a second
+real connection is the `_Racing*Repository` classes in
+`tests/use_cases/test_create_chat.py` and `tests/use_cases/test_create_message.py`;
+the invariant each one pins is in the `INVARIANT:` docstring on the test that uses it.
 
 **Migrations**: `migrations/env.py` reads the shared `METADATA` and rewrites
 the DSN driver from `postgresql+asyncpg` → `postgresql` (Alembic uses sync
@@ -169,14 +192,15 @@ env vars (see `docker-compose.yml`). `api_bootstrapper_config` builds the
 - Domain exceptions (`app/exceptions.py`: `PermissionDeniedError`,
   `ValidationError`, `ConflictError`) are registered as handlers in
   `build_app`'s `exception_handlers` dict alongside the `advanced_alchemy`
-  exceptions (`NotFoundError`, `DuplicateKeyError`, `ForeignKeyError`). Full
-  mapping table and the one deliberate exception (login's `401` via Litestar's
-  own `NotAuthorizedException`) are in `architecture/messages.md` and
-  `architecture/auth.md`.
+  exceptions (`NotFoundError`, `DuplicateKeyError`, `ForeignKeyError`). Every
+  mapping, and why login's `401` deliberately uses Litestar's own
+  `NotAuthorizedException` instead, is described in
+  `planning/decisions/2026-08-21-domain-error-vocabulary.md`.
 - **Comments.** None, unless the code would read as a bug without one; then a
   single line. Rationale, design decisions and "why not X" belong in
-  `architecture/<capability>.md` and `planning/changes/`, never in the source —
-  those are the durable homes, and a comment restating them goes stale in place.
+  `planning/decisions/` and the PR body, never in the source — those are where
+  such reasoning is reviewed and kept, and a comment restating it goes stale in
+  place.
   What survives in `app/` today is the whole permitted category: a setting that
   looks arbitrary (`join_transaction_mode`, `populate_existing`,
   `capture_parameters=False`), an `orm.foreign()` on a column with no
@@ -186,3 +210,29 @@ env vars (see `docker-compose.yml`). `api_bootstrapper_config` builds the
 - `ruff` is configured with `select = ["ALL"]` and a line length of 120 —
   expect strict lint. Type-check with `ty`; use `# ty: ignore[<rule>]` for
   suppressions.
+
+## Vocabulary
+
+A term is listed only when there is a synonym to reject, or a meaning subtle
+enough that code and docs must agree on it.
+
+- **Chat** — a row in `chats`: a type (`direct` or `group`), an optional title,
+  its creator, and a pointer to its newest non-deleted message. *Avoid:*
+  conversation, room, thread.
+- **Direct chat** — a chat between exactly two users, identified by `direct_key`,
+  the canonical `min(user_id):max(user_id)` string under a unique constraint.
+  That key is what makes opening one twice an upsert instead of a read-then-race.
+  *Avoid:* DM, 1:1.
+- **Member** — the `(chat_id, user_id)` row granting access to a chat, plus that
+  user's read marker. Necessary for every read or write on a chat; not
+  sufficient for editing or deleting a message. *Avoid:* participant, subscriber.
+- **Idempotency key** — the client-supplied UUID on a send, unique per
+  `(chat_id, idempotency_key)`. Scoped to one chat, because the key identifies a
+  retry of "send this message to this chat". *Avoid:* dedupe key, request id.
+- **Unread** — a count computed at read time against one marker per member, not
+  a set of per-message receipt rows. *Avoid:* unseen, badge count.
+- **Cursor** — a message id passed as `before_id` or `after_id`. The two are
+  mutually exclusive on one request. *Avoid:* page token, offset.
+- **Read marker** — a member's `last_read_message_id`, the highest id they have
+  acknowledged. Advances only forward, via `GREATEST` inside the UPDATE. *Avoid:*
+  read receipt, watermark.

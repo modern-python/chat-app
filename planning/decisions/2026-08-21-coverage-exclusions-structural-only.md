@@ -1,5 +1,4 @@
 ---
-status: accepted
 summary: Coverage exclusions are reserved for code pytest structurally cannot execute; unreachable-in-production branches are tested through repository seams instead.
 ---
 
@@ -8,8 +7,10 @@ summary: Coverage exclusions are reserved for code pytest structurally cannot ex
 The suite runs at `--cov-fail-under=100`. Two mechanisms can exempt code, and
 each has a narrow warrant:
 
-- `[tool.coverage.run] omit` lists `migrations/*`, `app/api/__main__.py` and
-  `planning/index.py` — files pytest never imports at all.
+- `[tool.coverage.run] omit` is reserved for files the default pytest run never
+  imports at all. The live list is `omit` in `pyproject.toml`, which carries an
+  inline reason wherever the exclusion is not evident from the path itself;
+  enumerating it here would be a copy that goes stale.
 - `# pragma: no cover` is not used anywhere in `app/`, `tests/` or
   `migrations/`.
 

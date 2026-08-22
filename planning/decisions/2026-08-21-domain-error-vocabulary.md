@@ -1,5 +1,4 @@
 ---
-status: accepted
 summary: Domain failures are split across PermissionDeniedError (403), ValidationError (400) and ConflictError (409) rather than expressed as authorization failures.
 ---
 
@@ -28,6 +27,13 @@ copies, and it is wrong twice over: a body with three members in a direct chat
 is not a permissions problem, and the author of a deleted message *is*
 authorized. Returning either inside a "Permission denied" envelope tells the
 client to go find credentials it already has.
+
+Login failure is the mirror of that mistake, and it is why the login handler
+raises Litestar's own `NotAuthorizedException` instead of
+`PermissionDeniedError`: a bad credential is an *identification* failure, not
+an authorization decision about an already-identified actor — at that point
+there is no actor yet to authorize. It is the one place `litestar.exceptions`
+is used deliberately.
 
 ## Consequence
 
