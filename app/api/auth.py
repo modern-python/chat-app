@@ -18,7 +18,7 @@ type AuthedRequest = litestar.Request[tables.UsersTable, Token, typing.Any]
 
 
 async def retrieve_user_handler(token: Token, connection: ASGIConnection) -> tables.UsersTable | None:
-    # Auth middleware runs before request-scoped DI exists; see architecture/auth.md.
+    # Auth middleware runs before request-scoped DI exists, so this opens its own session.
     try:
         user_id = int(token.sub)
     except ValueError:
