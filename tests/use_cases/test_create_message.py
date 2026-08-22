@@ -108,9 +108,7 @@ async def test_non_member_cannot_send(
 async def test_concurrent_duplicate_key_recovers_the_winners_message(
     create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: tables.UsersTable
 ) -> None:
-    """INVARIANT: a message insert that loses the (chat_id, idempotency_key) race.
-
-    Returns the winner's row with created=False, never a duplicate.
+    """INVARIANT: a message insert losing the (chat_id, idempotency_key) race returns the winner's row.
 
     Broken by dropping the explicit `await self.transaction.rollback()` before the
     recovery read, or by widening the caught exception beyond DuplicateKeyError so

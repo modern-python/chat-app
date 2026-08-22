@@ -88,9 +88,7 @@ async def test_direct_chat_is_idempotent_for_the_same_pair(
 async def test_direct_chat_creation_recovers_from_a_concurrent_duplicate_key(
     create_chat_use_case: CreateChatUseCase, alice: tables.UsersTable, bob: tables.UsersTable
 ) -> None:
-    """INVARIANT: a direct-chat insert that loses the uq_chats_direct_key race.
-
-    Recovers the winner's row instead of raising.
+    """INVARIANT: a direct-chat insert losing the uq_chats_direct_key race recovers the winner's row.
 
     Broken by returning from inside the `async with self.transaction:` block, or
     by re-reading before the rollback: Transaction.__aexit__ rolls back and closes
