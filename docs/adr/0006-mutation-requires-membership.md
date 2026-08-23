@@ -1,7 +1,3 @@
----
-summary: Editing and deleting a message requires chat membership as well as authorship; the check order is existence, membership, authorship.
----
-
 # Mutation requires membership, not just authorship
 
 `fetch_message_for_author` (`app/use_cases/message_authorization.py`) is the

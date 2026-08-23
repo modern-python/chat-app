@@ -1,7 +1,3 @@
----
-summary: Direct-chat creation and message send recover from a unique-constraint violation and re-read, rather than trusting a pre-check.
----
-
 # Upsert by recovering from DuplicateKeyError
 
 Both `CreateChatUseCase` and `CreateMessageUseCase` read first to see whether

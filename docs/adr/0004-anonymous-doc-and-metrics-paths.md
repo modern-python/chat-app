@@ -1,7 +1,3 @@
----
-summary: The auth exclude list carries four anchored prefixes — /docs, /health, /static and /metrics — and nothing else.
----
-
 # The anonymous surface is four prefixes
 
 `jwt_cookie_auth`'s `exclude` list holds `^/docs`, `^/health`, `^/static` and

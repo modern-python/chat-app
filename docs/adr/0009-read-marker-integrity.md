@@ -1,7 +1,3 @@
----
-summary: The read marker advances only to a message in its own chat, and advances atomically via GREATEST so it can never move backwards.
----
-
 # Read-marker integrity
 
 `MarkReadUseCase` does three things in order: verify membership, verify that

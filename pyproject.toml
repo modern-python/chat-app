@@ -98,4 +98,5 @@ omit = [
     # on that as an accident of discovery.
     "planning/index.py",
     "planning/links.py",
+    "docs/adr/check.py",
 ]
