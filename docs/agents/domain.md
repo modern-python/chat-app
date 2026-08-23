@@ -2,41 +2,29 @@
 
 How the engineering skills should consume this repo's domain documentation when exploring the codebase.
 
+This repo is **single-context**: one glossary and one decision log, both at the root. There is no `CONTEXT-MAP.md`, no per-context `CONTEXT.md`, and no context-scoped ADR directory.
+
 ## Before exploring, read these
 
-- **`CONTEXT.md`** at the repo root, or
-- **`CONTEXT-MAP.md`** at the repo root if it exists: it points at one `CONTEXT.md` per context. Read each one relevant to the topic.
-- **`docs/adr/`**: read ADRs that touch the area you're about to work in. In multi-context repos, also check `src/<context>/docs/adr/` for context-scoped decisions.
+- **`CONTEXT.md`** at the repo root: the glossary, and nothing but the glossary.
+- **`docs/adr/`**: the ADRs that touch the area you're about to work in. `docs/adr/README.md` carries the local standard, which is stricter than the stock ADR format: rejected alternatives and a revisit trigger are required, not optional.
 
-If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`) creates them lazily when terms or decisions actually get resolved.
+If either doesn't exist yet, **proceed silently**. Don't flag its absence; don't suggest creating it upfront. The `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`) creates them lazily when terms or decisions actually get resolved.
 
 ## File structure
-
-Single-context repo (most repos):
 
 ```
 /
 ├── CONTEXT.md
-├── docs/adr/
-│   ├── 0001-event-sourced-orders.md
-│   └── 0002-postgres-for-write-model.md
-└── src/
+├── docs/
+│   └── adr/
+│       ├── 0001-sequence-ids-not-snowflakes.md
+│       └── 0002-cookie-auth-not-bearer.md
+├── app/
+└── tests/
 ```
 
-Multi-context repo (presence of `CONTEXT-MAP.md` at the root):
-
-```
-/
-├── CONTEXT-MAP.md
-├── docs/adr/                          ← system-wide decisions
-└── src/
-    ├── ordering/
-    │   ├── CONTEXT.md
-    │   └── docs/adr/                  ← context-specific decisions
-    └── billing/
-        ├── CONTEXT.md
-        └── docs/adr/
-```
+ADR numbers are permanent and assigned in dependency order, so reading from `0001` upward introduces the system in the order its decisions build on each other. A new ADR takes the next free number.
 
 ## Use the glossary's vocabulary
 
@@ -48,4 +36,4 @@ If the concept you need isn't in the glossary yet, that's a signal: either you'r
 
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
 
-> _Contradicts ADR-0007 (event-sourced orders), but worth reopening because…_
+> _Contradicts ADR-0007 (upsert via duplicate-key recovery), but worth reopening because…_
