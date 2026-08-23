@@ -42,9 +42,13 @@ All three must be true, or it is not an ADR:
 
 What the code actually does, and the constraint that forced it.
 
-## Rejected: <the obvious alternative>
+## Rejected: deriving it from the environment
 
 Why it was not taken. Enough that a future explorer does not re-litigate it.
+
+## Rejected: defaulting to True
+
+One heading per alternative, named in the heading so it gets its own anchor.
 
 ## Consequence
 
@@ -56,8 +60,7 @@ uncovered.
 The concrete signal that should reopen this decision.
 ```
 
-`## Rejected:` repeats once per alternative worth remembering. `## Consequence`
-is optional. `## Revisit trigger` is required and enforced.
+`## Consequence` is optional. `## Revisit trigger` is required and enforced.
 
 ## Where other facts go
 
