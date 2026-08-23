@@ -1,29 +1,19 @@
 # Architecture decision records
 
 One file per decision taken, especially the options **rejected**, so reviews do
-not re-litigate them. `just check-adrs` validates the set; CI runs it.
-
-The directory listing is the index. There is no generated listing and no
-`summary` field: the number, the slug and the `# ` title already say what a file
-is, and a fourth telling would be the copy nobody edits.
+not re-litigate them. The directory listing is the index: there is no generated
+listing and no `summary` frontmatter. `just check-adrs` validates the set, and
+CI runs it.
 
 ## Numbering
 
 Numbers run contiguously from `0001`, are permanent, and mean nothing beyond
-identity. A new ADR takes the next free number, so numbering is the order
-decisions were adopted. Nothing is ever renumbered: renumbering would break
-every reference for a property no reader should rely on.
-
-The first thirteen are the exception that proves this. They were written on one
-day, so their dates could not order them, and they were seeded in dependency
-order instead. That is a one-off property of the seed set, not a rule, and it
-stops being true at `0014`. Do not read the sequence as a curriculum.
+identity. A new ADR takes the next free number. Nothing is ever renumbered.
 
 ## Status lives in the frontmatter, or nowhere
 
 An ADR with no frontmatter is **accepted**. There is no exit from this
-directory: an ADR is never deleted or edited into reversal, because a superseded
-decision that stays readable is one that does not get re-argued.
+directory: a superseded decision stays readable, or it gets re-argued.
 
 When a later ADR supersedes an earlier one, add to the earlier file:
 
@@ -32,8 +22,6 @@ When a later ADR supersedes an earlier one, add to the earlier file:
 superseded_by: 0014-its-slug
 ---
 ```
-
-`check.py` fails if that pointer does not name a real ADR.
 
 ## The admission test
 
@@ -44,10 +32,6 @@ All three must be true, or it is not an ADR:
    it was done this way.
 3. **A real trade-off.** There were genuine alternatives and one was picked for
    specific reasons.
-
-If a decision is easy to reverse, you will just reverse it. If it is not
-surprising, nobody will wonder. If there was no alternative, there is nothing to
-record beyond doing the obvious thing.
 
 This is stricter than the stock format the `/domain-modeling` skill writes, which
 treats rejected alternatives and consequences as optional and expects a body of
@@ -77,12 +61,11 @@ The concrete signal that should reopen this decision.
 ```
 
 `## Rejected:` repeats once per alternative worth remembering. `## Consequence`
-is optional. `## Revisit trigger` is **required** and `check.py` enforces it: a
-decision with no trigger is never revisited, only rediscovered.
+is optional. `## Revisit trigger` is required and enforced.
 
 ## Where other facts go
 
-This directory is one of four homes, and the narrowest. See
+This is one of four homes, and the narrowest. See
 [`../../planning/README.md`](../../planning/README.md#where-a-fact-goes) for the
-admission check that decides between them: code, an `INVARIANT:`-marked test, an
-ADR here, or a deferred item in [`../../planning/deferred/`](../../planning/deferred/).
+admission check that decides between code, an `INVARIANT:`-marked test, an ADR
+here, and a deferred item in [`../../planning/deferred/`](../../planning/deferred/).
