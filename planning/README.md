@@ -118,7 +118,7 @@ Against upstream convention 2.2.0:
    PR body.
 2. `architecture/` is removed; there is no capability-page home and no promotion
    rule. Enforceable claims are `INVARIANT:`-marked tests; the ubiquitous
-   language lives in [`../CLAUDE.md`](../CLAUDE.md)'s Vocabulary section.
+   language lives in [`../CONTEXT.md`](../CONTEXT.md).
 3. `deferred.md` is a `deferred/` directory of indexed, trigger-bearing items.
 4. Decision frontmatter drops `status` and `supersedes`. Largely subsumed by 7:
    decisions are no longer a `planning/` artifact at all.
