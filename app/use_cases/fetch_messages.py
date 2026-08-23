@@ -4,6 +4,7 @@ from collections.abc import Sequence
 
 from db_retry import postgres_retry
 
+from app.actor import Actor
 from app.database import tables
 from app.exceptions import PermissionDeniedError, ValidationError
 from app.repositories.chat_members_repository import ChatMembersRepository
@@ -22,7 +23,7 @@ class FetchMessagesUseCase:
     async def __call__(
         self,
         *,
-        actor: tables.UsersTable,
+        actor: Actor,
         chat_id: int,
         before_id: int | None = None,
         after_id: int | None = None,

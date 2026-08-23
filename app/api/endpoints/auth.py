@@ -9,6 +9,7 @@ from litestar.response import Response
 from app.api.auth import AuthedRequest, jwt_cookie_auth
 from app.schemas import api as schemas
 from app.use_cases.authenticate_user import AuthenticateUserUseCase
+from app.use_cases.fetch_user import FetchUserUseCase
 from app.use_cases.register_user import RegisterUserUseCase
 
 
@@ -48,8 +49,11 @@ async def logout() -> Response[None]:
 
 
 @litestar.get("/auth/me/")
-async def me(request: AuthedRequest) -> schemas.User:
-    return schemas.User.model_validate(request.user)
+async def me(request: AuthedRequest, fetch_user_use_case: NamedDependency[FetchUserUseCase]) -> schemas.User:
+    user: typing.Final = await fetch_user_use_case(actor=request.user)
+    if user is None:
+        raise NotAuthorizedException(detail="Invalid authentication credentials")
+    return schemas.User.model_validate(user)
 
 
 ROUTER: typing.Final = litestar.Router(

@@ -22,6 +22,12 @@ A chat between exactly two users, identified by `direct_key`, the canonical
 makes opening one twice an upsert instead of a read-then-race.
 _Avoid_: DM, 1:1
 
+**Actor**:
+The authenticated caller of a request: a user id proved by the JWT, carrying no
+other user data and not implying the row still exists. Distinct from **Member**,
+which is per-chat authorization for that actor.
+_Avoid_: principal, current user, authenticated user
+
 **Member**:
 The `(chat_id, user_id)` row granting access to a chat, plus that user's read
 marker. Necessary for every read or write on a chat; not sufficient for editing

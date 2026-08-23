@@ -1,6 +1,7 @@
 import pytest
 from advanced_alchemy.exceptions import DuplicateKeyError
 
+from app.actor import Actor
 from app.database import tables
 from app.exceptions import ValidationError
 from app.repositories.chats_repository import ChatsRepository
@@ -59,7 +60,7 @@ class _AlwaysDuplicateChatsRepository(ChatsRepository):
 
 
 async def test_direct_chat_is_created_with_both_members(
-    create_chat_use_case: CreateChatUseCase, alice: tables.UsersTable, bob: tables.UsersTable
+    create_chat_use_case: CreateChatUseCase, alice: Actor, bob: Actor
 ) -> None:
     chat, created = await create_chat_use_case(
         actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id])
@@ -71,7 +72,7 @@ async def test_direct_chat_is_created_with_both_members(
 
 
 async def test_direct_chat_is_idempotent_for_the_same_pair(
-    create_chat_use_case: CreateChatUseCase, alice: tables.UsersTable, bob: tables.UsersTable
+    create_chat_use_case: CreateChatUseCase, alice: Actor, bob: Actor
 ) -> None:
     first, first_created = await create_chat_use_case(
         actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id])
@@ -86,7 +87,7 @@ async def test_direct_chat_is_idempotent_for_the_same_pair(
 
 
 async def test_direct_chat_creation_recovers_from_a_concurrent_duplicate_key(
-    create_chat_use_case: CreateChatUseCase, alice: tables.UsersTable, bob: tables.UsersTable
+    create_chat_use_case: CreateChatUseCase, alice: Actor, bob: Actor
 ) -> None:
     """INVARIANT: a direct-chat insert losing the uq_chats_direct_key race recovers the winner's row.
 
@@ -117,7 +118,7 @@ async def test_direct_chat_creation_recovers_from_a_concurrent_duplicate_key(
 
 
 async def test_direct_chat_recovery_raises_if_the_winners_row_is_unreadable(
-    create_chat_use_case: CreateChatUseCase, alice: tables.UsersTable, bob: tables.UsersTable
+    create_chat_use_case: CreateChatUseCase, alice: Actor, bob: Actor
 ) -> None:
     broken = CreateChatUseCase(
         transaction=create_chat_use_case.transaction,
@@ -131,7 +132,7 @@ async def test_direct_chat_recovery_raises_if_the_winners_row_is_unreadable(
 
 
 async def test_group_chat_reraises_an_unexpected_duplicate_key(
-    create_chat_use_case: CreateChatUseCase, alice: tables.UsersTable, bob: tables.UsersTable
+    create_chat_use_case: CreateChatUseCase, alice: Actor, bob: Actor
 ) -> None:
     broken = CreateChatUseCase(
         transaction=create_chat_use_case.transaction,
@@ -146,9 +147,9 @@ async def test_group_chat_reraises_an_unexpected_duplicate_key(
 
 async def test_direct_chat_rejects_more_than_two_members(
     create_chat_use_case: CreateChatUseCase,
-    alice: tables.UsersTable,
-    bob: tables.UsersTable,
-    carol: tables.UsersTable,
+    alice: Actor,
+    bob: Actor,
+    carol: Actor,
 ) -> None:
     with pytest.raises(ValidationError):
         await create_chat_use_case(
@@ -158,9 +159,9 @@ async def test_direct_chat_rejects_more_than_two_members(
 
 async def test_group_chat_includes_the_creator(
     create_chat_use_case: CreateChatUseCase,
-    alice: tables.UsersTable,
-    bob: tables.UsersTable,
-    carol: tables.UsersTable,
+    alice: Actor,
+    bob: Actor,
+    carol: Actor,
 ) -> None:
     chat, created = await create_chat_use_case(
         actor=alice,

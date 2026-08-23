@@ -1,9 +1,13 @@
+import datetime
+
 import pytest
 import sqlalchemy as sa
 from httpx import AsyncClient
+from litestar.security.jwt import Token
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.auth import jwt_cookie_auth
+from app.actor import Actor
+from app.api.auth import jwt_cookie_auth, retrieve_user_handler
 from app.database import tables
 
 
@@ -122,3 +126,20 @@ async def test_me_rejects_token_for_a_user_that_no_longer_exists(client: AsyncCl
     client.cookies.set(jwt_cookie_auth.key, token)
     response = await client.get("/api/auth/me/")
     assert response.status_code == 401
+
+
+async def test_retrieve_user_handler_resolves_an_actor_without_reading_the_database() -> None:
+    """INVARIANT: authentication resolves an Actor from the token alone, taking no database read.
+
+    Broken by fetching the DI container off the connection to load the user row again: that is a
+    second session per authenticated request against a pool of five, and it hands every use case a
+    detached ORM instance. Responses are identical either way, so nothing else would catch it; the
+    connection passed here is None precisely so any such access fails.
+
+    The cost this accepts: authentication no longer proves the user row exists. A token that
+    outlives its user still authenticates - reads come back empty, writes hit the messages.user_id
+    foreign key. Nothing can reach that state today; a delete-user path would have to solve it
+    alongside logout not revoking the JWT.
+    """
+    token = Token(sub="42", exp=datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(minutes=5))
+    assert await retrieve_user_handler(token, None) == Actor(id=42)  # ty: ignore[invalid-argument-type]

@@ -3,6 +3,7 @@ import uuid
 
 import pytest
 
+from app.actor import Actor
 from app.database import tables
 from app.exceptions import PermissionDeniedError, ValidationError
 from app.repositories.messages_repository import MessagesRepository
@@ -13,14 +14,14 @@ from app.use_cases.fetch_chats import FetchChatsUseCase
 from app.use_cases.mark_read import MarkReadUseCase
 
 
-SendFixture = typing.Callable[[tables.UsersTable, int, str], typing.Awaitable[tuple[tables.MessagesTable, bool]]]
+SendFixture = typing.Callable[[Actor, int, str], typing.Awaitable[tuple[tables.MessagesTable, bool]]]
 
 
 async def test_unread_counts_messages_from_others(
     fetch_chats_use_case: FetchChatsUseCase,
     direct_chat: tables.ChatsTable,
-    alice: tables.UsersTable,
-    bob: tables.UsersTable,
+    alice: Actor,
+    bob: Actor,
     send: SendFixture,
 ) -> None:
     await send(bob, direct_chat.id, "one")
@@ -32,7 +33,7 @@ async def test_unread_counts_messages_from_others(
 async def test_own_messages_are_never_unread(
     fetch_chats_use_case: FetchChatsUseCase,
     direct_chat: tables.ChatsTable,
-    alice: tables.UsersTable,
+    alice: Actor,
     send: SendFixture,
 ) -> None:
     await send(alice, direct_chat.id, "mine")
@@ -44,7 +45,7 @@ async def test_system_messages_count_as_unread(
     fetch_chats_use_case: FetchChatsUseCase,
     messages_repository: MessagesRepository,
     direct_chat: tables.ChatsTable,
-    alice: tables.UsersTable,
+    alice: Actor,
 ) -> None:
     await messages_repository.create(
         tables.MessagesTable(chat_id=direct_chat.id, user_id=None, idempotency_key=uuid.uuid4(), text="Bob joined")
@@ -57,8 +58,8 @@ async def test_marking_read_clears_the_count(
     fetch_chats_use_case: FetchChatsUseCase,
     mark_read_use_case: MarkReadUseCase,
     direct_chat: tables.ChatsTable,
-    alice: tables.UsersTable,
-    bob: tables.UsersTable,
+    alice: Actor,
+    bob: Actor,
     send: SendFixture,
 ) -> None:
     message, _ = await send(bob, direct_chat.id, "one")
@@ -73,8 +74,8 @@ async def test_deleted_messages_are_not_unread(
     fetch_chats_use_case: FetchChatsUseCase,
     delete_message_use_case: DeleteMessageUseCase,
     direct_chat: tables.ChatsTable,
-    alice: tables.UsersTable,
-    bob: tables.UsersTable,
+    alice: Actor,
+    bob: Actor,
     send: SendFixture,
 ) -> None:
     message, _ = await send(bob, direct_chat.id, "one")
@@ -84,7 +85,7 @@ async def test_deleted_messages_are_not_unread(
 
 
 async def test_chat_with_no_messages_has_no_last_message(
-    fetch_chats_use_case: FetchChatsUseCase, direct_chat: tables.ChatsTable, alice: tables.UsersTable
+    fetch_chats_use_case: FetchChatsUseCase, direct_chat: tables.ChatsTable, alice: Actor
 ) -> None:
     chats = await fetch_chats_use_case(actor=alice)
     assert chats[0].id == direct_chat.id
@@ -96,8 +97,8 @@ async def test_listing_orders_most_recently_active_chat_first(
     fetch_chats_use_case: FetchChatsUseCase,
     create_chat_use_case: CreateChatUseCase,
     direct_chat: tables.ChatsTable,
-    alice: tables.UsersTable,
-    carol: tables.UsersTable,
+    alice: Actor,
+    carol: Actor,
     send: SendFixture,
 ) -> None:
     other_chat, _ = await create_chat_use_case(
@@ -112,9 +113,9 @@ async def test_unread_counts_differ_per_chat(
     fetch_chats_use_case: FetchChatsUseCase,
     create_chat_use_case: CreateChatUseCase,
     direct_chat: tables.ChatsTable,
-    alice: tables.UsersTable,
-    bob: tables.UsersTable,
-    carol: tables.UsersTable,
+    alice: Actor,
+    bob: Actor,
+    carol: Actor,
     send: SendFixture,
 ) -> None:
     other_chat, _ = await create_chat_use_case(
@@ -131,7 +132,7 @@ async def test_unread_counts_differ_per_chat(
 
 
 async def test_non_member_cannot_mark_read(
-    mark_read_use_case: MarkReadUseCase, direct_chat: tables.ChatsTable, carol: tables.UsersTable
+    mark_read_use_case: MarkReadUseCase, direct_chat: tables.ChatsTable, carol: Actor
 ) -> None:
     with pytest.raises(PermissionDeniedError):
         await mark_read_use_case(
@@ -143,8 +144,8 @@ async def test_marking_read_with_a_message_from_another_chat_is_rejected(
     mark_read_use_case: MarkReadUseCase,
     create_chat_use_case: CreateChatUseCase,
     direct_chat: tables.ChatsTable,
-    alice: tables.UsersTable,
-    carol: tables.UsersTable,
+    alice: Actor,
+    carol: Actor,
     send: SendFixture,
 ) -> None:
     other_chat, _ = await create_chat_use_case(
@@ -158,7 +159,7 @@ async def test_marking_read_with_a_message_from_another_chat_is_rejected(
 
 
 async def test_marking_read_rejects_an_unknown_message_id(
-    mark_read_use_case: MarkReadUseCase, direct_chat: tables.ChatsTable, alice: tables.UsersTable
+    mark_read_use_case: MarkReadUseCase, direct_chat: tables.ChatsTable, alice: Actor
 ) -> None:
     with pytest.raises(ValidationError):
         await mark_read_use_case(
@@ -170,8 +171,8 @@ async def test_marking_read_is_monotonic(
     fetch_chats_use_case: FetchChatsUseCase,
     mark_read_use_case: MarkReadUseCase,
     direct_chat: tables.ChatsTable,
-    alice: tables.UsersTable,
-    bob: tables.UsersTable,
+    alice: Actor,
+    bob: Actor,
     send: SendFixture,
 ) -> None:
     first, _ = await send(bob, direct_chat.id, "one")
@@ -194,8 +195,8 @@ async def test_deleting_the_newest_message_updates_preview_and_ordering(
     delete_message_use_case: DeleteMessageUseCase,
     create_chat_use_case: CreateChatUseCase,
     direct_chat: tables.ChatsTable,
-    alice: tables.UsersTable,
-    carol: tables.UsersTable,
+    alice: Actor,
+    carol: Actor,
     send: SendFixture,
 ) -> None:
     other_chat, _ = await create_chat_use_case(
@@ -220,7 +221,7 @@ async def test_deleting_a_non_newest_message_leaves_preview_and_ordering_unchang
     fetch_chats_use_case: FetchChatsUseCase,
     delete_message_use_case: DeleteMessageUseCase,
     direct_chat: tables.ChatsTable,
-    alice: tables.UsersTable,
+    alice: Actor,
     send: SendFixture,
 ) -> None:
     first, _ = await send(alice, direct_chat.id, "first")

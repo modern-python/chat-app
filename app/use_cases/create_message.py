@@ -4,6 +4,7 @@ import typing
 from advanced_alchemy.exceptions import DuplicateKeyError
 from db_retry import Transaction, postgres_retry
 
+from app.actor import Actor
 from app.database import tables
 from app.exceptions import PermissionDeniedError
 from app.repositories.chat_members_repository import ChatMembersRepository
@@ -21,7 +22,7 @@ class CreateMessageUseCase:
 
     @postgres_retry
     async def __call__(
-        self, *, actor: tables.UsersTable, chat_id: int, data: SendMessageRequest
+        self, *, actor: Actor, chat_id: int, data: SendMessageRequest
     ) -> tuple[tables.MessagesTable, bool]:
         if not await self.chat_members_repository.is_member(chat_id, actor.id):
             msg = "Not a member of this chat"

@@ -1,6 +1,6 @@
 # Cookie auth, not a bearer header
 
-**Decision:** The JWT travels in a cookie (`JWTCookieAuth[UsersTable]`), not in
+**Decision:** The JWT travels in a cookie (`JWTCookieAuth[Actor]`), not in
 an `Authorization: Bearer` header.
 
 ## Context
