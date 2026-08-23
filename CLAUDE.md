@@ -214,29 +214,9 @@ env vars (see `docker-compose.yml`). `api_bootstrapper_config` builds the
 
 ## Vocabulary
 
-A term is listed only when there is a synonym to reject, or a meaning subtle
-enough that code and docs must agree on it.
-
-- **Chat** — a row in `chats`: a type (`direct` or `group`), an optional title,
-  its creator, and a pointer to its newest non-deleted message. *Avoid:*
-  conversation, room, thread.
-- **Direct chat** — a chat between exactly two users, identified by `direct_key`,
-  the canonical `min(user_id):max(user_id)` string under a unique constraint.
-  That key is what makes opening one twice an upsert instead of a read-then-race.
-  *Avoid:* DM, 1:1.
-- **Member** — the `(chat_id, user_id)` row granting access to a chat, plus that
-  user's read marker. Necessary for every read or write on a chat; not
-  sufficient for editing or deleting a message. *Avoid:* participant, subscriber.
-- **Idempotency key** — the client-supplied UUID on a send, unique per
-  `(chat_id, idempotency_key)`. Scoped to one chat, because the key identifies a
-  retry of "send this message to this chat". *Avoid:* dedupe key, request id.
-- **Unread** — a count computed at read time against one marker per member, not
-  a set of per-message receipt rows. *Avoid:* unseen, badge count.
-- **Cursor** — a message id passed as `before_id` or `after_id`. The two are
-  mutually exclusive on one request. *Avoid:* page token, offset.
-- **Read marker** — a member's `last_read_message_id`, the highest id they have
-  acknowledged. Advances only forward, via `GREATEST` inside the UPDATE. *Avoid:*
-  read receipt, watermark.
+The ubiquitous language lives in [`CONTEXT.md`](CONTEXT.md) at the repo root: a
+glossary and nothing else, listing a term only when there is a synonym to reject
+or a meaning subtle enough that code and docs must agree on it.
 
 ## Agent skills
 
