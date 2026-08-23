@@ -24,7 +24,7 @@ If either doesn't exist yet, **proceed silently**. Don't flag its absence; don't
 └── tests/
 ```
 
-ADR numbers are permanent and assigned in dependency order, so reading from `0001` upward introduces the system in the order its decisions build on each other. A new ADR takes the next free number.
+ADR numbers are permanent and mean nothing beyond identity: a new ADR takes the next free number, so the sequence is the order decisions were adopted. Read the ones relevant to your area, not the sequence front to back.
 
 ## Use the glossary's vocabulary
 

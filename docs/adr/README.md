@@ -7,18 +7,17 @@ The directory listing is the index. There is no generated listing and no
 `summary` field: the number, the slug and the `# ` title already say what a file
 is, and a fourth telling would be the copy nobody edits.
 
-## Numbering is reading order, not chronology
+## Numbering
 
-Numbers run contiguously from `0001` and are permanent. They are assigned in
-**dependency order**, so reading `0001` upward introduces the system in the
-order its decisions build on each other: identity, then auth, then the error and
-authorization vocabulary, then write patterns, then chat state, then events,
-then testing policy.
+Numbers run contiguously from `0001`, are permanent, and mean nothing beyond
+identity. A new ADR takes the next free number, so numbering is the order
+decisions were adopted. Nothing is ever renumbered: renumbering would break
+every reference for a property no reader should rely on.
 
-A new ADR takes the next free number, which puts it at the end regardless of
-where it belongs conceptually. That is the cost of permanence and it is
-accepted: renumbering to preserve the reading order would break every existing
-reference.
+The first thirteen are the exception that proves this. They were written on one
+day, so their dates could not order them, and they were seeded in dependency
+order instead. That is a one-off property of the seed set, not a rule, and it
+stops being true at `0014`. Do not read the sequence as a curriculum.
 
 ## Status lives in the frontmatter, or nowhere
 
