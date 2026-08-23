@@ -1,7 +1,3 @@
----
-summary: Domain failures are split across PermissionDeniedError (403), ValidationError (400) and ConflictError (409) rather than expressed as authorization failures.
----
-
 # Three domain exceptions, not one
 
 `app/exceptions.py` defines `ChatAppError` and three subclasses, each with a

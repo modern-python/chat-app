@@ -48,7 +48,7 @@ transaction that must span two writes, a unique constraint that two concurrent
 requests can both hit, a count that must not cost a row per event. This repo
 answers that with a domain that actually needs it. See
 [PR #1](https://github.com/modern-python/chat-app/pull/1) for the full design
-and `planning/decisions/` for the calls taken along the way.
+and `docs/adr/` for the calls taken along the way.
 
 | Pattern | Where to look |
 |---|---|

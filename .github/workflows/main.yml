@@ -24,6 +24,7 @@ jobs:
           uv run ruff check . --no-fix
           uv run ty check
           uv run python planning/index.py --check
+          uv run python docs/adr/check.py
           uv run python planning/links.py
 
   pytest:

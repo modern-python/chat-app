@@ -1,7 +1,3 @@
----
-summary: Event fan-out uses one Redis channel per user; per-chat and hybrid topologies rejected.
----
-
 # Per-user channel topology
 
 Every connected client subscribes to exactly one channel, `user:{user_id}`. A
