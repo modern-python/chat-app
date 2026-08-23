@@ -33,10 +33,6 @@ All three must be true, or it is not an ADR:
 3. **A real trade-off.** There were genuine alternatives and one was picked for
    specific reasons.
 
-This is stricter than the stock format the `/domain-modeling` skill writes, which
-treats rejected alternatives and consequences as optional and expects a body of
-one to three sentences. Here they are the point of the file.
-
 ## Template
 
 ```md
