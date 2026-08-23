@@ -28,8 +28,9 @@ Login failure is the mirror of that mistake, and it is why the login handler
 raises Litestar's own `NotAuthorizedException` instead of
 `PermissionDeniedError`: a bad credential is an *identification* failure, not
 an authorization decision about an already-identified actor — at that point
-there is no actor yet to authorize. It is the one place `litestar.exceptions`
-is used deliberately.
+there is no actor yet to authorize. `GET /api/auth/me/` raises it for the same
+reason, on a token whose user row is gone. Those two are the only deliberate
+uses of `litestar.exceptions`.
 
 ## Consequence
 

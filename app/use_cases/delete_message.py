@@ -3,6 +3,7 @@ import datetime
 
 from db_retry import Transaction, postgres_retry
 
+from app.actor import Actor
 from app.database import tables
 from app.repositories.chat_members_repository import ChatMembersRepository
 from app.repositories.chats_repository import ChatsRepository
@@ -18,7 +19,7 @@ class DeleteMessageUseCase:
     chats_repository: ChatsRepository
 
     @postgres_retry
-    async def __call__(self, *, actor: tables.UsersTable, message_id: int) -> None:
+    async def __call__(self, *, actor: Actor, message_id: int) -> None:
         async with self.transaction:
             message = await fetch_message_for_author(
                 messages_repository=self.messages_repository,

@@ -7,6 +7,7 @@ from modern_di_pytest import expose
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import ioc, security
+from app.actor import Actor
 from app.database import tables
 from app.schemas import api as schemas
 from app.use_cases.create_chat import CreateChatUseCase
@@ -27,7 +28,7 @@ async def request_container(
 expose(ioc.Repositories, ioc.UseCases, container_fixture="request_container")
 
 
-async def _make_user(session: AsyncSession, username: str) -> tables.UsersTable:
+async def _make_actor(session: AsyncSession, username: str) -> Actor:
     user: typing.Final = UserFactory.build(
         username=username,
         password_hash=security.hash_password("hunter2hunter2"),
@@ -35,28 +36,26 @@ async def _make_user(session: AsyncSession, username: str) -> tables.UsersTable:
     )
     session.add(user)
     await session.flush()
-    return user
+    return Actor(id=user.id)
 
 
 @pytest.fixture
-async def alice(db_session: AsyncSession) -> tables.UsersTable:
-    return await _make_user(db_session, "alice")
+async def alice(db_session: AsyncSession) -> Actor:
+    return await _make_actor(db_session, "alice")
 
 
 @pytest.fixture
-async def bob(db_session: AsyncSession) -> tables.UsersTable:
-    return await _make_user(db_session, "bob")
+async def bob(db_session: AsyncSession) -> Actor:
+    return await _make_actor(db_session, "bob")
 
 
 @pytest.fixture
-async def carol(db_session: AsyncSession) -> tables.UsersTable:
-    return await _make_user(db_session, "carol")
+async def carol(db_session: AsyncSession) -> Actor:
+    return await _make_actor(db_session, "carol")
 
 
 @pytest.fixture
-async def direct_chat(
-    create_chat_use_case: CreateChatUseCase, alice: tables.UsersTable, bob: tables.UsersTable
-) -> tables.ChatsTable:
+async def direct_chat(create_chat_use_case: CreateChatUseCase, alice: Actor, bob: Actor) -> tables.ChatsTable:
     chat, _ = await create_chat_use_case(
         actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id])
     )
@@ -65,7 +64,7 @@ async def direct_chat(
 
 @pytest.fixture
 async def alice_message(
-    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: tables.UsersTable
+    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: Actor
 ) -> tables.MessagesTable:
     message, _ = await create_message_use_case(
         actor=alice, chat_id=direct_chat.id, data=schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hello")
@@ -76,10 +75,10 @@ async def alice_message(
 @pytest.fixture
 def send(
     create_message_use_case: CreateMessageUseCase,
-) -> typing.Callable[[tables.UsersTable, int, str], typing.Awaitable[tuple[tables.MessagesTable, bool]]]:
+) -> typing.Callable[[Actor, int, str], typing.Awaitable[tuple[tables.MessagesTable, bool]]]:
     """Send a message with a fresh idempotency key per call, so callers never collide on retries."""
 
-    async def _send(actor: tables.UsersTable, chat_id: int, text: str) -> tuple[tables.MessagesTable, bool]:
+    async def _send(actor: Actor, chat_id: int, text: str) -> tuple[tables.MessagesTable, bool]:
         return await create_message_use_case(
             actor=actor, chat_id=chat_id, data=schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text=text)
         )

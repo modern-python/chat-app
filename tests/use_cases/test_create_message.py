@@ -3,6 +3,7 @@ import uuid
 import pytest
 from advanced_alchemy.exceptions import DuplicateKeyError
 
+from app.actor import Actor
 from app.database import tables
 from app.exceptions import PermissionDeniedError
 from app.repositories.chats_repository import ChatsRepository
@@ -56,7 +57,7 @@ class _NeverFoundMessagesRepository(MessagesRepository):
 
 
 async def test_send_returns_created_true_on_first_call(
-    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: tables.UsersTable
+    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: Actor
 ) -> None:
     message, created = await create_message_use_case(
         actor=alice, chat_id=direct_chat.id, data=schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hi")
@@ -66,7 +67,7 @@ async def test_send_returns_created_true_on_first_call(
 
 
 async def test_repeated_idempotency_key_returns_the_same_message(
-    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: tables.UsersTable
+    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: Actor
 ) -> None:
     key = uuid.uuid4()
     first, first_created = await create_message_use_case(
@@ -85,7 +86,7 @@ async def test_send_updates_chat_last_message_id(
     create_message_use_case: CreateMessageUseCase,
     chats_repository: ChatsRepository,
     direct_chat: tables.ChatsTable,
-    alice: tables.UsersTable,
+    alice: Actor,
 ) -> None:
     message, _ = await create_message_use_case(
         actor=alice, chat_id=direct_chat.id, data=schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hi")
@@ -95,7 +96,7 @@ async def test_send_updates_chat_last_message_id(
 
 
 async def test_non_member_cannot_send(
-    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, carol: tables.UsersTable
+    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, carol: Actor
 ) -> None:
     with pytest.raises(PermissionDeniedError):
         await create_message_use_case(
@@ -106,7 +107,7 @@ async def test_non_member_cannot_send(
 
 
 async def test_concurrent_duplicate_key_recovers_the_winners_message(
-    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: tables.UsersTable
+    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: Actor
 ) -> None:
     """INVARIANT: a message insert losing the (chat_id, idempotency_key) race returns the winner's row.
 
@@ -138,7 +139,7 @@ async def test_concurrent_duplicate_key_recovers_the_winners_message(
 
 
 async def test_send_recovery_raises_if_the_winners_row_is_unreadable(
-    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: tables.UsersTable
+    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: Actor
 ) -> None:
     broken = CreateMessageUseCase(
         transaction=create_message_use_case.transaction,
@@ -160,8 +161,8 @@ async def test_same_idempotency_key_in_two_different_chats_creates_two_messages(
     create_message_use_case: CreateMessageUseCase,
     create_chat_use_case: CreateChatUseCase,
     direct_chat: tables.ChatsTable,
-    alice: tables.UsersTable,
-    carol: tables.UsersTable,
+    alice: Actor,
+    carol: Actor,
 ) -> None:
     other_chat, _ = await create_chat_use_case(
         actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[carol.id])

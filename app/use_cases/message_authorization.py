@@ -1,5 +1,6 @@
 import typing
 
+from app.actor import Actor
 from app.database import tables
 from app.exceptions import PermissionDeniedError
 from app.repositories.chat_members_repository import ChatMembersRepository
@@ -10,7 +11,7 @@ async def fetch_message_for_author(
     *,
     messages_repository: MessagesRepository,
     chat_members_repository: ChatMembersRepository,
-    actor: tables.UsersTable,
+    actor: Actor,
     message_id: int,
     action: str,
 ) -> tables.MessagesTable:
