@@ -1,7 +1,3 @@
----
-summary: Message ids are a Postgres BigInt identity sequence, not snowflake ids.
----
-
 # Sequence ids, not snowflakes
 
 `messages.id` is a plain BigInt identity column. Postgres assigns values

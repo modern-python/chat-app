@@ -39,10 +39,10 @@ coverage your run reported — 100% line coverage is the gate),
 - [ ] **Adding a fact anywhere?** Run the admission check: derivable from `app/`
       → don't write it; enforceable → a test; otherwise it does not get written.
 - [ ] **Rejected an alternative** with reasoning that would otherwise be
-      re-litigated? File it in [`planning/decisions/`](../planning/decisions/)
-      with a revisit trigger — not here.
+      re-litigated? File it in [`docs/adr/`](../docs/adr/) as the next numbered
+      ADR, with a revisit trigger — not here.
 - [ ] **Found real work you are not doing now?** File it in
       [`planning/deferred/`](../planning/deferred/), self-contained, with a
       revisit trigger — not here.
-- [ ] `just lint`, `just check-planning`, `just check-links`, `just test` and
-      `just test-migrations` all pass.
+- [ ] `just lint`, `just check-planning`, `just check-adrs`, `just check-links`,
+      `just test` and `just test-migrations` all pass.

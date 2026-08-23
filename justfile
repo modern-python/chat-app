@@ -35,13 +35,17 @@ lint:
     uv run ruff check . --fix
     uv run ty check
 
-# Print the planning index (deferred, then decisions) to stdout.
+# Print the planning index (the deferred queue) to stdout.
 index:
     uv run python planning/index.py
 
-# Validate planning/deferred/ + planning/decisions/ frontmatter and naming; CI runs this.
+# Validate planning/deferred/ frontmatter and naming; CI runs this.
 check-planning:
     uv run python planning/index.py --check
+
+# Validate docs/adr/ numbering, naming and revisit triggers; CI runs this.
+check-adrs:
+    uv run python docs/adr/check.py
 
 # Check every relative Markdown link and heading anchor in the repo.
 check-links:

@@ -1,7 +1,3 @@
----
-summary: Coverage exclusions are reserved for code pytest structurally cannot execute; unreachable-in-production branches are tested through repository seams instead.
----
-
 # Coverage exclusions are structural only
 
 The suite runs at `--cov-fail-under=100`. Two mechanisms can exempt code, and

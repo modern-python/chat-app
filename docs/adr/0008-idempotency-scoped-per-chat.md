@@ -1,7 +1,3 @@
----
-summary: Message idempotency is scoped to (chat_id, idempotency_key), not to the key alone.
----
-
 # Idempotency is scoped per chat
 
 `messages` carries `UniqueConstraint("chat_id", "idempotency_key")`. The

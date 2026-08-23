@@ -1,7 +1,3 @@
----
-summary: Authentication is a JWT in a cookie rather than a bearer header, because EventSource cannot set an Authorization header.
----
-
 # Cookie auth, not a bearer header
 
 **Decision:** The JWT travels in a cookie (`JWTCookieAuth[UsersTable]`), not in
@@ -30,7 +26,7 @@ realistic shape.
 The cost is accepted deliberately: cookie auth needs CSRF consideration on
 state-changing endpoints, and `jwt_cookie_secure` must be `True` behind
 HTTPS — see
-[`2026-08-21-explicit-cookie-secure-flag.md`](2026-08-21-explicit-cookie-secure-flag.md).
+[`0003-explicit-cookie-secure-flag.md`](0003-explicit-cookie-secure-flag.md).
 
 ## Revisit trigger
 

@@ -1,7 +1,3 @@
----
-summary: The session cookie's Secure flag comes from an explicit jwt_cookie_secure setting, not from inspecting service_environment.
----
-
 # Cookie security is an explicit setting
 
 `Settings.jwt_cookie_secure` defaults to `False` and is passed straight to

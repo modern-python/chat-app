@@ -66,10 +66,11 @@ run alembic ...`.
 - `just lint` runs `eof-fixer`, `ruff format`, `ruff check --fix`, then `ty
   check` — this project uses `ty`, not mypy; suppress with `# ty:
   ignore[<rule>]` (not `# type: ignore`).
-- `just index` prints the deferred/decision listing; `just check-planning`
-  validates `planning/deferred/` and `planning/decisions/` frontmatter (and
-  that every deferred item carries a revisit trigger); `just check-links`
-  validates every relative Markdown link and heading anchor in the repo.
+- `just index` prints the deferred listing; `just check-planning` validates
+  `planning/deferred/` frontmatter (and that every item carries a revisit
+  trigger); `just check-adrs` validates `docs/adr/` numbering, naming and
+  revisit triggers; `just check-links` validates every relative Markdown link
+  and heading anchor in the repo.
 
 Python is 3.14, dependencies managed by `uv`. The API is exposed on `:8000`.
 
@@ -81,8 +82,8 @@ verification); it is reviewed with the diff. There is no change file and no lane
 to choose. A trivial PR (typo, dep bump, formatter) deletes the template and
 ships a conventional-commit title.
 
-Two things outlive the PR and are committed under `planning/`: an alternative
-**rejected** with reasoning goes to `planning/decisions/`, and real work **not
+Two things outlive the PR and are committed: an alternative **rejected** with
+reasoning goes to `docs/adr/` as a numbered ADR, and real work **not
 scheduled** goes to `planning/deferred/` (self-contained, with a revisit
 trigger). There is no capability-page home — the living truth about behaviour is
 the code and its `INVARIANT:`-marked tests, and a behaviour change is reviewed
@@ -195,10 +196,10 @@ env vars (see `docker-compose.yml`). `api_bootstrapper_config` builds the
   exceptions (`NotFoundError`, `DuplicateKeyError`, `ForeignKeyError`). Every
   mapping, and why login's `401` deliberately uses Litestar's own
   `NotAuthorizedException` instead, is described in
-  `planning/decisions/2026-08-21-domain-error-vocabulary.md`.
+  `docs/adr/0005-domain-error-vocabulary.md`.
 - **Comments.** None, unless the code would read as a bug without one; then a
   single line. Rationale, design decisions and "why not X" belong in
-  `planning/decisions/` and the PR body, never in the source — those are where
+  `docs/adr/` and the PR body, never in the source — those are where
   such reasoning is reviewed and kept, and a comment restating it goes stale in
   place.
   What survives in `app/` today is the whole permitted category: a setting that

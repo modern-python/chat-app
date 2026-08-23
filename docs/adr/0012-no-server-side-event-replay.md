@@ -1,7 +1,3 @@
----
-summary: Reconnect recovery uses channel history plus a REST resync; no durable per-user event log honouring Last-Event-ID.
----
-
 # No server-side event replay
 
 On reconnect the client recovers in two layers. Fast path:
