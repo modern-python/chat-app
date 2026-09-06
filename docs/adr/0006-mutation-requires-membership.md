@@ -27,7 +27,7 @@ A non-member still learns whether a message id exists, because the message must
 be loaded before its chat is known. That residual is accepted deliberately and
 mirrors the decision that `FetchChatUseCase` returns `403` rather than
 pretending the chat does not exist. See
-`planning/deferred/2026-08-21-message-id-existence-404-vs-403.md`.
+[#21](https://github.com/modern-python/chat-app/issues/21).
 
 ## Revisit trigger
 

@@ -38,10 +38,9 @@ only covers what isn't obvious from the recipe names.
 
 Almost everything runs through Docker Compose: the app and Postgres come up
 together, and running tests/migrations outside Docker is **not** the
-supported path (`just install`, `just lint`, `just index`, `just
-check-planning` and `just check-links` are the exceptions — they run on the
-host). Inside the container, raw commands look like `uv run pytest ...`, `uv
-run alembic ...`.
+supported path (`just install` and `just lint` are the exceptions — they run
+on the host). Inside the container, raw commands look like `uv run pytest ...`,
+`uv run alembic ...`.
 
 - `just test` cycles the DB (downgrade to `base`, upgrade to `head`) before
   pytest and tears the stack down before and after. Pass pytest args through,
@@ -66,24 +65,37 @@ run alembic ...`.
 - `just lint` runs `eof-fixer`, `ruff format`, `ruff check --fix`, then `ty
   check` — this project uses `ty`, not mypy; suppress with `# ty:
   ignore[<rule>]` (not `# type: ignore`).
-- `just index` prints the deferred listing; `just check-planning` validates
-  `planning/deferred/` frontmatter (and that every item carries a revisit
-  trigger); `just check-adrs` validates `docs/adr/` numbering, naming and
-  revisit triggers; `just check-links` validates every relative Markdown link
-  and heading anchor in the repo.
 
 Python is 3.14, dependencies managed by `uv`. The API is exposed on `:8000`.
 
 ## Workflow
 
-Two things outlive the PR and are committed: an alternative **rejected** with
-reasoning goes to `docs/adr/` as a numbered ADR, and real work **not
-scheduled** goes to `planning/deferred/` (self-contained, with a revisit
-trigger). There is no capability-page home — the living truth about behaviour is
-the code and its `INVARIANT:`-marked tests, and a behaviour change is reviewed
-with the diff, not promoted to a page. See `planning/README.md` for the full
-convention, including the admission check that decides where a given fact
-belongs.
+**The spec for a change is its PR body**, not a committed file. Two things
+outlive the PR, and there are exactly two places to put them: an alternative
+**rejected** with reasoning becomes a numbered ADR in
+[`docs/adr/`](docs/adr/), and real work **not scheduled** becomes a GitHub
+issue. There is no third state and no capability-page home — the living truth
+about behaviour is the code and its `INVARIANT:`-marked tests, and a behaviour
+change is reviewed with the diff, not promoted to a page.
+
+### Where a fact goes
+
+Four homes, one owner each:
+
+| Home | Holds |
+|---|---|
+| `app/` | anything readable from the module — the default |
+| a named test | an **invariant**: must stay true, and a change could silently break it |
+| `docs/adr/` | a rejected alternative, with the reasoning that would otherwise be re-litigated |
+| a GitHub issue | real work, not scheduled |
+
+Before writing a line anywhere:
+
+> Can an agent get this by reading `app/`? → **don't write it.**
+> Would a wrong change here fail a test? → it belongs **in the test**, not in prose.
+> Otherwise it does not get written.
+
+**Prose about mechanism has no home. There is no file to add a paragraph to.**
 
 An invariant is a test whose name is the claim, with a docstring opening
 `INVARIANT:` and a second paragraph naming what breaks it. Applied to new
@@ -216,13 +228,13 @@ or a meaning subtle enough that code and docs must agree on it.
 
 ### Issue tracker
 
-Issues and specs live as markdown files under `.scratch/<feature-slug>/`
-(gitignored). See [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md).
+Issues and specs live as GitHub issues on `modern-python/chat-app`, driven with
+`gh`. See [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md).
 
 ### Triage labels
 
-The five canonical triage roles, unchanged, recorded as a `Status:` line in each
-issue file. See [`docs/agents/triage-labels.md`](docs/agents/triage-labels.md).
+The five canonical triage roles, unchanged, applied as GitHub labels. See
+[`docs/agents/triage-labels.md`](docs/agents/triage-labels.md).
 
 ### Domain docs
 

@@ -47,11 +47,10 @@ Authentication no longer proves the user exists. A token whose row is gone
 authenticates: reads come back empty, writes hit the `messages.user_id` foreign
 key. Nothing can reach that state today — there is no delete-user or
 disable-user path — and the accepted cost is recorded in the invariant test's
-docstring, not as a deferred item.
+docstring, not as an open issue.
 
 ## Revisit trigger
 
 A delete-user or disable-user path being added. It meets the same problem as
-[`../../planning/deferred/2026-08-21-logout-does-not-revoke-jwt.md`](../../planning/deferred/2026-08-21-logout-does-not-revoke-jwt.md)
-— a credential outliving what it names — and both should be solved once,
-together.
+[#20](https://github.com/modern-python/chat-app/issues/20) — a credential
+outliving what it names — and both should be solved once, together.
