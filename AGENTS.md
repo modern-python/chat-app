@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -33,7 +33,7 @@ template breaks the transaction model or the DI wiring.
 
 ## Commands
 
-Recipes live in the `Justfile` — run `just --list` to see them; this section
+Recipes live in the `justfile` — run `just --list` to see them; this section
 only covers what isn't obvious from the recipe names.
 
 Almost everything runs through Docker Compose: the app and Postgres come up
