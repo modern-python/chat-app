@@ -93,7 +93,4 @@ omit = [
     # run under `just test-migrations` instead, where coverage is off.
     "tests/migrations/*",
     "app/api/__main__.py",
-    # No __init__.py under docs/, so coverage's package walk never reaches this on its own -
-    # omit it explicitly rather than relying on that as an accident of discovery.
-    "docs/adr/check.py",
 ]

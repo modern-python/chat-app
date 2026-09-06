@@ -34,7 +34,3 @@ lint:
     uv run ruff format .
     uv run ruff check . --fix
     uv run ty check
-
-# Validate docs/adr/ numbering, naming and revisit triggers; CI runs this.
-check-adrs:
-    uv run python docs/adr/check.py

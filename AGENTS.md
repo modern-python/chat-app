@@ -38,9 +38,9 @@ only covers what isn't obvious from the recipe names.
 
 Almost everything runs through Docker Compose: the app and Postgres come up
 together, and running tests/migrations outside Docker is **not** the
-supported path (`just install`, `just lint` and `just check-adrs` are the
-exceptions — they run on the host). Inside the container, raw commands look
-like `uv run pytest ...`, `uv run alembic ...`.
+supported path (`just install` and `just lint` are the exceptions — they run
+on the host). Inside the container, raw commands look like `uv run pytest ...`,
+`uv run alembic ...`.
 
 - `just test` cycles the DB (downgrade to `base`, upgrade to `head`) before
   pytest and tears the stack down before and after. Pass pytest args through,
@@ -65,8 +65,6 @@ like `uv run pytest ...`, `uv run alembic ...`.
 - `just lint` runs `eof-fixer`, `ruff format`, `ruff check --fix`, then `ty
   check` — this project uses `ty`, not mypy; suppress with `# ty:
   ignore[<rule>]` (not `# type: ignore`).
-- `just check-adrs` validates `docs/adr/` numbering, naming and revisit
-  triggers. CI runs it as a lint step.
 
 Python is 3.14, dependencies managed by `uv`. The API is exposed on `:8000`.
 

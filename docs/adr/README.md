@@ -2,8 +2,8 @@
 
 One file per decision taken, especially the options **rejected**, so reviews do
 not re-litigate them. The directory listing is the index: there is no generated
-listing and no `summary` frontmatter. `just check-adrs` validates the set, and
-CI runs it.
+listing and no `summary` frontmatter. Nothing validates the set mechanically;
+the standard below is held up by review.
 
 ## Numbering
 
@@ -60,7 +60,8 @@ uncovered.
 The concrete signal that should reopen this decision.
 ```
 
-`## Consequence` is optional. `## Revisit trigger` is required and enforced.
+`## Consequence` is optional. `## Revisit trigger` is required; a reviewer is
+what enforces it.
 
 ## Where other facts go
 

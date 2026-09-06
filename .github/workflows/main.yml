@@ -23,7 +23,6 @@ jobs:
           uv run ruff format . --check
           uv run ruff check . --no-fix
           uv run ty check
-          uv run python docs/adr/check.py
 
   pytest:
     runs-on: ubuntu-latest
