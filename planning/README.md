@@ -16,10 +16,9 @@ rejected, live in [`../docs/adr/`](../docs/adr/) as numbered ADRs.
 
 ## Quick path (start here)
 
-**1. Write the spec in the PR body.** The shape is why, design, non-goals,
-verification. There is no change file to write and nothing to commit: the PR body
-*is* the spec, reviewed inline with the diff. A trivial PR (typo, dep bump,
-formatter, mechanical rename) ships a conventional-commit title with no body
+**1. Write the spec in the PR body.** There is no change file to write and nothing to
+commit: the PR body *is* the spec, reviewed inline with the diff. A trivial PR (typo,
+dep bump, formatter, mechanical rename) ships a conventional-commit title with no body
 ceremony.
 
 **2. File what outlives the PR:**
