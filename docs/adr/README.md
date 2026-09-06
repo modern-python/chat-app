@@ -65,6 +65,6 @@ The concrete signal that should reopen this decision.
 ## Where other facts go
 
 This is one of four homes, and the narrowest. See
-[`../../planning/README.md`](../../planning/README.md#where-a-fact-goes) for the
-admission check that decides between code, an `INVARIANT:`-marked test, an ADR
-here, and a deferred item in [`../../planning/deferred/`](../../planning/deferred/).
+[`../../AGENTS.md`](../../AGENTS.md#where-a-fact-goes) for the admission check
+that decides between code, an `INVARIANT:`-marked test, an ADR here, and a
+GitHub issue for real work that is not scheduled.
