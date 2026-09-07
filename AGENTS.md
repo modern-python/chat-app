@@ -173,15 +173,11 @@ env vars (see `docker-compose.yml`). `api_bootstrapper_config` builds the
 - Domain exceptions (`app/exceptions.py`: `PermissionDeniedError`,
   `ValidationError`, `ConflictError`) are registered as handlers in
   `build_app`'s `exception_handlers` dict alongside the `advanced_alchemy`
-  exceptions (`NotFoundError`, `DuplicateKeyError`, `ForeignKeyError`). Every
-  mapping, and why login's `401` deliberately uses Litestar's own
-  `NotAuthorizedException` instead, is described in
-  `docs/adr/0005-domain-error-vocabulary.md`.
+  exceptions (`NotFoundError`, `DuplicateKeyError`, `ForeignKeyError`).
 - **Comments.** None, unless the code would read as a bug without one; then a
   single line. Rationale, design decisions and "why not X" belong in
-  `docs/adr/` and the PR body, never in the source — those are where
-  such reasoning is reviewed and kept, and a comment restating it goes stale in
-  place.
+  the PR body, never in the source — that is where such reasoning is reviewed
+  and kept, and a comment restating it goes stale in place.
   What survives in `app/` today is the whole permitted category: a setting that
   looks arbitrary (`join_transaction_mode`, `populate_existing`,
   `capture_parameters=False`), an `orm.foreign()` on a column with no
