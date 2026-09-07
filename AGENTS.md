@@ -70,36 +70,10 @@ Python is 3.14, dependencies managed by `uv`. The API is exposed on `:8000`.
 
 ## Workflow
 
-**The spec for a change is its PR body**, not a committed file. Two things
-outlive the PR, and there are exactly two places to put them: an alternative
-**rejected** with reasoning becomes a numbered ADR in
-[`docs/adr/`](docs/adr/), and real work **not scheduled** becomes a GitHub
-issue. There is no third state and no capability-page home — the living truth
-about behaviour is the code and its `INVARIANT:`-marked tests, and a behaviour
-change is reviewed with the diff, not promoted to a page.
+Real work **not scheduled** becomes a GitHub issue.
 
-### Where a fact goes
-
-Four homes, one owner each:
-
-| Home | Holds |
-|---|---|
-| `app/` | anything readable from the module — the default |
-| a named test | an **invariant**: must stay true, and a change could silently break it |
-| `docs/adr/` | a rejected alternative, with the reasoning that would otherwise be re-litigated |
-| a GitHub issue | real work, not scheduled |
-
-Before writing a line anywhere:
-
-> Can an agent get this by reading `app/`? → **don't write it.**
-> Would a wrong change here fail a test? → it belongs **in the test**, not in prose.
-> Otherwise it does not get written.
-
-**Prose about mechanism has no home. There is no file to add a paragraph to.**
-
-An invariant is a test whose name is the claim, with a docstring opening
-`INVARIANT:` and a second paragraph naming what breaks it. Applied to new
-claims; the existing suite is not retrofitted.
+An invariant is a test whose name is the claim, with a docstring opening `INVARIANT:` and a second
+paragraph naming what breaks it. Applied to new claims; the existing suite is not retrofitted.
 
 ## Architecture
 
@@ -199,15 +173,11 @@ env vars (see `docker-compose.yml`). `api_bootstrapper_config` builds the
 - Domain exceptions (`app/exceptions.py`: `PermissionDeniedError`,
   `ValidationError`, `ConflictError`) are registered as handlers in
   `build_app`'s `exception_handlers` dict alongside the `advanced_alchemy`
-  exceptions (`NotFoundError`, `DuplicateKeyError`, `ForeignKeyError`). Every
-  mapping, and why login's `401` deliberately uses Litestar's own
-  `NotAuthorizedException` instead, is described in
-  `docs/adr/0005-domain-error-vocabulary.md`.
+  exceptions (`NotFoundError`, `DuplicateKeyError`, `ForeignKeyError`).
 - **Comments.** None, unless the code would read as a bug without one; then a
   single line. Rationale, design decisions and "why not X" belong in
-  `docs/adr/` and the PR body, never in the source — those are where
-  such reasoning is reviewed and kept, and a comment restating it goes stale in
-  place.
+  the PR body, never in the source — that is where such reasoning is reviewed
+  and kept, and a comment restating it goes stale in place.
   What survives in `app/` today is the whole permitted category: a setting that
   looks arbitrary (`join_transaction_mode`, `populate_existing`,
   `capture_parameters=False`), an `orm.foreign()` on a column with no
