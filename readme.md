@@ -63,7 +63,7 @@ and `docs/adr/` for the calls taken along the way.
 | DI providers as pytest fixtures | `tests/use_cases/conftest.py` |
 | Simulating a DB race at the repository seam | `tests/use_cases/test_create_chat.py` |
 
-## 📝 [License](LICENSE)
+## 📝 [License](https://github.com/modern-python/chat-app/blob/main/LICENSE)
 
 ## Part of `modern-python`
 

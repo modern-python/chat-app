@@ -72,6 +72,10 @@ Python is 3.14, dependencies managed by `uv`. The API is exposed on `:8000`.
 
 Real work **not scheduled** becomes a GitHub issue.
 
+Every link in `README.md` must be absolute: `https://github.com/modern-python/<repo>/blob/main/<path>`,
+or `.../tree/main/<path>` for a directory. Never a relative path: `README.md` is also the PyPI long
+description, and PyPI does not rewrite relative links, so a relative one 404s on the package page.
+
 An invariant is a test whose name is the claim, with a docstring opening `INVARIANT:` and a second
 paragraph naming what breaks it. Applied to new claims; the existing suite is not retrofitted.
 
