@@ -62,22 +62,16 @@ on the host). Inside the container, raw commands look like `uv run pytest ...`,
   recipe shell-quotes it with `quote()` before handing it to `alembic
   revision --autogenerate -m`). It runs against an already-upgraded DB; the
   recipe enforces that by upgrading first, so don't run autogen by hand.
-- `just lint` runs `eof-fixer`, `ruff format`, `ruff check --fix`, then `ty
-  check` — this project uses `ty`, not mypy; suppress with `# ty:
-  ignore[<rule>]` (not `# type: ignore`).
+- `just lint` runs `eof-fixer`, `ruff format`, `ruff check --fix`, then
+  `ty check`.
 
 Python is 3.14, dependencies managed by `uv`. The API is exposed on `:8000`.
 
 ## Workflow
 
-Real work **not scheduled** becomes a GitHub issue.
-
 Every link in `README.md` must be absolute: `https://github.com/modern-python/<repo>/blob/main/<path>`,
 or `.../tree/main/<path>` for a directory. Never a relative path: `README.md` is also the PyPI long
 description, and PyPI does not rewrite relative links, so a relative one 404s on the package page.
-
-An invariant is a test whose name is the claim, with a docstring opening `INVARIANT:` and a second
-paragraph naming what breaks it. Applied to new claims; the existing suite is not retrofitted.
 
 ## Architecture
 
@@ -139,7 +133,7 @@ the template predates this and hand-assembles dependencies instead. The
 race-simulation pattern used to test the concurrent-retry paths without a second
 real connection is the `_Racing*Repository` classes in
 `tests/use_cases/test_create_chat.py` and `tests/use_cases/test_create_message.py`;
-the invariant each one pins is in the `INVARIANT:` docstring on the test that uses it.
+the invariant each one pins is in the docstring on the test that uses it.
 
 **Migrations**: `migrations/env.py` reads the shared `METADATA` and rewrites
 the DSN driver from `postgresql+asyncpg` → `postgresql` (Alembic uses sync
@@ -189,8 +183,7 @@ env vars (see `docker-compose.yml`). `api_bootstrapper_config` builds the
   is not dead code (`AuthenticateUserUseCase`'s hash-anyway). Alembic's own
   `# ###` autogenerate markers stay — they are regenerated on every migration.
 - `ruff` is configured with `select = ["ALL"]` and a line length of 120 —
-  expect strict lint. Type-check with `ty`; use `# ty: ignore[<rule>]` for
-  suppressions.
+  expect strict lint. Type-check with `ty`.
 
 ## Vocabulary
 
