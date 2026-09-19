@@ -1,34 +1,16 @@
 # Cookie auth, not a bearer header
 
-**Decision:** The JWT travels in a cookie (`JWTCookieAuth[Actor]`), not in
-an `Authorization: Bearer` header.
-
-## Context
-
-Every endpoint shipped today is REST, where a bearer header is the more
-conventional choice and keeps the token out of the browser's ambient
-credential store. The realtime follow-on adds a server-sent-events stream.
-
-## Decision & rationale
-
-A browser `EventSource` cannot set request headers — there is no API for it.
-An SSE endpoint authenticated by a bearer header would therefore need a
-second authentication mechanism (a token in the query string, or a
-short-lived ticket exchanged before connecting), which means two code paths
-to keep in agreement and a token that lands in access logs.
-
-A cookie is sent automatically on the `EventSource` request, so the stream
-authenticates identically to every other endpoint with no second path. That
-this repository exists to demonstrate a realistic composition is what settles
-it: carrying two auth mechanisms to avoid a cookie would be the less
-realistic shape.
-
-The cost is accepted deliberately: cookie auth needs CSRF consideration on
-state-changing endpoints, and `jwt_cookie_secure` must be `True` behind
-HTTPS — see
-[`0003-explicit-cookie-secure-flag.md`](0003-explicit-cookie-secure-flag.md).
-
-## Revisit trigger
-
-The SSE endpoint being dropped from scope, or a non-browser client becoming
-the primary consumer.
+The JWT travels in a cookie (`JWTCookieAuth[Actor]`), not in an
+`Authorization: Bearer` header, although every endpoint shipped today is REST,
+where a bearer header is conventional and keeps the token out of the browser's
+ambient credential store. The planned server-sent-events stream settles it: a
+browser `EventSource` cannot set request headers, so a bearer-authenticated
+stream needs a second mechanism, a query-string token or a pre-connect ticket,
+which is two auth paths to keep in agreement and a token that lands in access
+logs. Two costs are accepted deliberately: state-changing endpoints need CSRF
+consideration, and `jwt_cookie_secure` is an explicit setting defaulting to
+`False` rather than derived from `service_environment`, because a security
+property inferred from an unrelated string is one nobody audits, and because
+`True` by default would break the local HTTP development this application is
+demonstrated with. The anonymous surface is four anchored `exclude` prefixes:
+`^/docs`, `^/health`, `^/static` and `^/metrics`.

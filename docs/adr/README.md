@@ -25,7 +25,7 @@ When a later ADR supersedes an earlier one, add to the earlier file:
 
 ```yaml
 ---
-superseded_by: 0014-its-slug
+superseded_by: 0010-its-slug
 ---
 ```
 
@@ -44,30 +44,15 @@ All three must be true, or it is not an ADR:
 ```md
 # One-line capitalized title
 
-**Decision:** What was decided, in a sentence.
-
-What the code actually does, and the constraint that forced it.
-
-## Rejected: deriving it from the environment
-
-Why it was not taken. Enough that a future explorer does not re-litigate it.
-
-## Rejected: defaulting to True
-
-One heading per alternative, named in the heading so it gets its own anchor.
-
-## Consequence
-
-The non-obvious downstream effect, including what this deliberately leaves
-uncovered.
-
-## Revisit trigger
-
-The concrete signal that should reopen this decision.
+One paragraph: what the context is, what was decided, and why, naming the
+rejected alternative where the rejection is not obvious. Typically 60 to 150
+words.
 ```
 
-`## Consequence` is optional. `## Revisit trigger` is required; a reviewer is
-what enforces it.
+That is the whole record: no `**Decision:**` line, no `## Rejected:` headings,
+no `## Consequence`, no `## Revisit trigger` section. A consequence or a
+revisit condition earns a sentence in the paragraph only when it is the real
+boundary of the decision; a reviewer is what enforces that.
 
 ## Where other facts go
 
