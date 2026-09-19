@@ -7,13 +7,19 @@ the standard below is held up by review.
 
 ## Numbering
 
-Numbers run contiguously from `0001`, are permanent, and mean nothing beyond
-identity. A new ADR takes the next free number. Nothing is ever renumbered.
+Numbers run contiguously from `0001` and mean nothing beyond identity. A new
+ADR takes the next free number. When the set is reshaped, because records were
+merged or dropped, the survivors are renumbered in their original order so the
+sequence stays contiguous, and every citation moves in the same change:
+`tests/test_adr_citations.py` fails on a `docs/adr/` path that no longer
+resolves.
 
 ## Status lives in the frontmatter, or nowhere
 
-An ADR with no frontmatter is **accepted**. There is no exit from this
-directory: a superseded decision stays readable, or it gets re-argued.
+An ADR with no frontmatter is **accepted**. A decision that is re-argued and
+replaced is superseded, not deleted, so the earlier reasoning stays readable. A
+record that no longer passes the admission test below is deleted outright; git
+history keeps it.
 
 When a later ADR supersedes an earlier one, add to the earlier file:
 
