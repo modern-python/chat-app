@@ -56,7 +56,9 @@ boundary of the decision; a reviewer is what enforces that.
 
 ## Where other facts go
 
-This is one of four homes, and the narrowest. See
-[`../../AGENTS.md`](../../AGENTS.md#where-a-fact-goes) for the admission check
-that decides between code, an `INVARIANT:`-marked test, an ADR here, and a
-GitHub issue for real work that is not scheduled.
+This is one of four homes, and the narrowest. Anything an agent can read out of
+`app/` stays in the code; a claim a wrong change could silently break belongs in
+an `INVARIANT:`-marked test; a rejected alternative, with the reasoning that
+would otherwise be re-litigated, is an ADR here; real work that is not scheduled
+is a GitHub issue. [`../../AGENTS.md`](../../AGENTS.md#workflow) defines the
+last two.
