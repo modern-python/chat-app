@@ -195,15 +195,12 @@ or a meaning subtle enough that code and docs must agree on it.
 
 ### Issue tracker
 
-Issues and specs live as GitHub issues on `modern-python/chat-app`, driven with
-`gh`. See [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md).
+GitHub issues on `modern-python/chat-app`, via `gh`. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-The five canonical triage roles, unchanged, applied as GitHub labels. See
-[`docs/agents/triage-labels.md`](docs/agents/triage-labels.md).
+The five canonical roles, each label string equal to its name. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See
-[`docs/agents/domain.md`](docs/agents/domain.md).
+Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
