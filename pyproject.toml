@@ -19,7 +19,8 @@ dependencies = [
     "alembic",
     "alembic-postgresql-enum",
     "psycopg2",
-    "sqlalchemy[asyncio]",
+    # <2.1 until advanced-alchemy translates 2.1 integrity errors (litestar-org/advanced-alchemy#803).
+    "sqlalchemy[asyncio]<2.1",
     "asyncpg",
     # tracing
     "opentelemetry-instrumentation-asyncpg",
