@@ -9,9 +9,9 @@ def test_db_dsn_parsed_exposes_driver() -> None:
     assert settings.db_dsn_parsed.database == "dbname"
 
 
-def test_sync_db_dsn_parsed_drops_the_async_driver() -> None:
+def test_sync_db_dsn_parsed_names_the_sync_driver() -> None:
     settings = Settings(db_dsn="postgresql+asyncpg://user:pw@host/dbname")
-    assert settings.sync_db_dsn_parsed.drivername == "postgresql"
+    assert settings.sync_db_dsn_parsed.drivername == "postgresql+psycopg2"
     assert settings.sync_db_dsn_parsed.database == "dbname"
 
 
