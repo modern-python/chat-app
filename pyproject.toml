@@ -79,7 +79,10 @@ pylint.max-args = 10
 addopts = "--cov=. --cov-report term-missing --cov-fail-under=100 --ignore=tests/migrations"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-filterwarnings = ["error"]
+filterwarnings = [
+    "error",
+    "ignore:The declarative_mixin decorator was used only by the now removed mypy plugin:sqlalchemy.exc.SADeprecationWarning",
+]
 
 [tool.coverage.report]
 exclude_also = ["if typing.TYPE_CHECKING:"]
