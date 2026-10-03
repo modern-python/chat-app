@@ -8,15 +8,15 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![ty](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json)](https://github.com/astral-sh/ty)
 
-### Description
+## Description
 
 Reference chat application for the `modern-python` organisation: a
-single-package Litestar service — JWT cookie auth, direct and group chats,
+single-package Litestar service with JWT cookie auth, direct and group chats,
 idempotent message send, cursor-paginated history, per-member read markers
-and unread counts — built to show the org's libraries composed on a domain
-more realistic than a two-table CRUD template.
+and unread counts. It shows the org's libraries composed on a domain more
+realistic than a two-table CRUD template.
 
-## Key Features
+## Key features
 
 - tests on `pytest` with automatic rollback after each test case, DI providers
   exposed as fixtures via `modern-di-pytest`
@@ -25,12 +25,12 @@ more realistic than a two-table CRUD template.
   app- and request-scoped providers
 - Observability tools integration built on
   [lite-bootstrap](https://github.com/modern-python/lite-bootstrap/)
-- Linting and formatting using `ruff` and `ty`
+- Linting and formatting with `ruff`, type checking with `ty`
 - `Alembic` for DB migrations
 - retried, use-case-owned transactions via
   [db-retry](https://github.com/modern-python/db-retry/)
 
-### After `git clone` run
+## After `git clone` run
 
 ```bash
 just --list
@@ -43,10 +43,9 @@ runs the full test suite (also via Docker Compose) at 100% coverage.
 ## Why this repo
 
 `litestar-sqlalchemy-template` shows each library in isolation on a two-table
-domain. Nothing shows them composed under load-bearing decisions — a
-transaction that must span two writes, a unique constraint that two concurrent
-requests can both hit, a count that must not cost a row per event. This repo
-answers that with a domain that actually needs it. See
+domain. The templates never need a transaction spanning two writes, a unique
+constraint hit by concurrent requests, or a count that must not cost a row per
+event. This domain needs all three. See
 [PR #1](https://github.com/modern-python/chat-app/pull/1) for the full design
 and `docs/adr/` for the calls taken along the way.
 
