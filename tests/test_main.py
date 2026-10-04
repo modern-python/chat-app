@@ -11,6 +11,7 @@ from app.database.resources import close_database_engine, create_database_engine
 from app.database.tables import UsersTable
 from app.exceptions import PermissionDeniedError
 from app.settings import settings
+from tests.conftest import rolled_back_db_session
 from tests.factories import UserFactory
 
 
@@ -52,18 +53,24 @@ async def test_create_database_engine_reads_settings_and_can_be_disposed() -> No
         await close_database_engine(engine)
 
 
-async def test_db_session_insert_is_visible_within_test(db_session: AsyncSession) -> None:
+async def test_db_session_teardown_rolls_back_committed_writes(di_container: modern_di.Container) -> None:
+    """INVARIANT: a commit inside a test only releases a savepoint, and teardown discards it.
+
+    The row is read back from an independent connection after teardown, so the check holds whatever runs before it.
+    """
     user = UserFactory.build()
-    db_session.add(user)
-    await db_session.commit()
+    async with rolled_back_db_session(di_container) as session:
+        session.add(user)
+        await session.commit()
+        assert (await session.scalars(sa.select(UsersTable).where(UsersTable.id == user.id))).one() is user
 
-    result = await db_session.scalars(sa.select(UsersTable))
-    assert len(result.all()) == 1
-
-
-async def test_db_session_rolls_back_between_tests(db_session: AsyncSession) -> None:
-    result = await db_session.scalars(sa.select(UsersTable))
-    assert result.all() == []
+    engine = create_database_engine()
+    try:
+        async with engine.connect() as connection:
+            result = await connection.scalars(sa.select(UsersTable.id).where(UsersTable.id == user.id))
+            assert result.all() == []
+    finally:
+        await engine.dispose()
 
 
 async def test_di_resolved_session_shares_the_overridden_connection(
