@@ -1,6 +1,8 @@
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from tests.api.helpers import count_statements as _count_statements
 from tests.api.helpers import create_direct_chat as _create_direct_chat
 from tests.api.helpers import login as _login
 from tests.api.helpers import register as _register
@@ -35,6 +37,31 @@ async def test_listing_populates_unread_count_and_last_message(client: AsyncClie
     assert item["unread_count"] == 2
     assert item["last_message"]["id"] != first["id"]
     assert item["last_message"]["text"] == "two"
+
+
+async def test_listing_runs_the_same_number_of_statements_for_one_chat_as_for_many(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    one_chat_id, _ = await _create_direct_chat(client)
+    await _send(client, one_chat_id, "hello")
+    partner_ids = [await _register(client, f"partner{index}") for index in range(5)]
+    await _register(client, "carol")
+    for partner_id in partner_ids:
+        chat = await client.post("/api/chats/", json={"chat_type": "direct", "member_ids": [partner_id]})
+        await _send(client, chat.json()["id"], "hello")
+
+    with _count_statements(db_session) as many_chats_statements:
+        many_chats_response = await client.get("/api/chats/")
+    await _login(client, "alice")
+    with _count_statements(db_session) as one_chat_statements:
+        one_chat_response = await client.get("/api/chats/")
+
+    many_chats_items = many_chats_response.json()["items"]
+    one_chat_items = one_chat_response.json()["items"]
+    assert len(many_chats_items) == 5
+    assert len(one_chat_items) == 1
+    assert all(item["last_message"] is not None for item in many_chats_items + one_chat_items)
+    assert len(many_chats_statements) == len(one_chat_statements), many_chats_statements
 
 
 @pytest.mark.usefixtures("db_session")
