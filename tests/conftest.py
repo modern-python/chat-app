@@ -48,8 +48,16 @@ async def db_session(di_container: modern_di.Container) -> typing.AsyncIterator[
     try:
         yield create_session(connection)
     finally:
-        if connection.in_transaction():
+        try:
+            if not transaction.is_active:
+                pytest.fail(
+                    "db_session: the outer test transaction is no longer active at teardown, so this test's writes "
+                    "were not rolled back. Something committed it instead of nesting a savepoint; check for a "
+                    'session created without join_transaction_mode="create_savepoint".',
+                    pytrace=False,
+                )
             await transaction.rollback()
-        await connection.close()
-        await engine.dispose()
-        di_container.reset_override(ioc.Database.database_engine)
+        finally:
+            await connection.close()
+            await engine.dispose()
+            di_container.reset_override(ioc.Database.database_engine)
