@@ -1,12 +1,15 @@
 import datetime
 import uuid
 from collections.abc import Iterable
-from typing import Any, Self
+from typing import Annotated, Any, Self
 
 import pydantic
 from pydantic import BaseModel, PositiveInt
 
 from app.database import tables
+
+
+MessageText = Annotated[str, pydantic.Field(min_length=1, max_length=4000)]
 
 
 class Base(BaseModel):
@@ -66,11 +69,11 @@ class ChatDetail(Chat):
 
 class SendMessageRequest(Base):
     idempotency_key: uuid.UUID
-    text: str = pydantic.Field(min_length=1, max_length=4000)
+    text: MessageText
 
 
 class EditMessageRequest(Base):
-    text: str = pydantic.Field(min_length=1, max_length=4000)
+    text: MessageText
 
 
 class Message(Base):
