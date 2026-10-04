@@ -1,7 +1,12 @@
+import contextlib
 import typing
 import uuid
+from collections.abc import Iterator
 
+import sqlalchemy as sa
 from httpx import AsyncClient
+from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
 
 
 async def register(client: AsyncClient, username: str) -> int:
@@ -33,3 +38,20 @@ async def send(client: AsyncClient, chat_id: int, text: str, key: uuid.UUID | No
         json={"idempotency_key": str(key or uuid.uuid4()), "text": text},
     )
     return response.json()
+
+
+@contextlib.contextmanager
+def count_statements(session: AsyncSession) -> Iterator[list[str]]:
+    """Collect every SQL statement sent on the test connection behind ``session`` while the block runs."""
+    connection: typing.Final = session.bind
+    assert isinstance(connection, AsyncConnection)
+    statements: typing.Final[list[str]] = []
+
+    def record(_conn: sa.Connection, _cursor: object, statement: str, *_: object) -> None:
+        statements.append(statement)
+
+    event.listen(connection.sync_connection, "before_cursor_execute", record)
+    try:
+        yield statements
+    finally:
+        event.remove(connection.sync_connection, "before_cursor_execute", record)
