@@ -16,7 +16,9 @@ def test_collection_builds_from_models() -> None:
 def _build_message_request(
     model: type[SendMessageRequest | EditMessageRequest], text: str
 ) -> SendMessageRequest | EditMessageRequest:
-    return model.model_validate({"idempotency_key": uuid.uuid4(), "text": text})
+    if model is SendMessageRequest:
+        return SendMessageRequest(idempotency_key=uuid.uuid4(), text=text)
+    return EditMessageRequest(text=text)
 
 
 @pytest.mark.parametrize("model", [SendMessageRequest, EditMessageRequest])
