@@ -1,3 +1,4 @@
+import contextlib
 import typing
 
 import litestar
@@ -38,8 +39,8 @@ async def di_container(app: litestar.Litestar) -> typing.AsyncIterator[modern_di
         await container.close_async()
 
 
-@pytest.fixture
-async def db_session(di_container: modern_di.Container) -> typing.AsyncIterator[AsyncSession]:
+@contextlib.asynccontextmanager
+async def rolled_back_db_session(di_container: modern_di.Container) -> typing.AsyncIterator[AsyncSession]:
     engine = create_database_engine()
     connection = await engine.connect()
     transaction = await connection.begin()
@@ -61,3 +62,9 @@ async def db_session(di_container: modern_di.Container) -> typing.AsyncIterator[
             await connection.close()
             await engine.dispose()
             di_container.reset_override(ioc.Database.database_engine)
+
+
+@pytest.fixture
+async def db_session(di_container: modern_di.Container) -> typing.AsyncIterator[AsyncSession]:
+    async with rolled_back_db_session(di_container) as session:
+        yield session
