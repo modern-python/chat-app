@@ -1,3 +1,4 @@
+import collections.abc
 import contextlib
 import typing
 
@@ -40,7 +41,7 @@ async def di_container(app: litestar.Litestar) -> typing.AsyncIterator[modern_di
 
 
 @contextlib.asynccontextmanager
-async def rolled_back_db_session(di_container: modern_di.Container) -> typing.AsyncIterator[AsyncSession]:
+async def rolled_back_db_session(di_container: modern_di.Container) -> collections.abc.AsyncGenerator[AsyncSession]:
     engine = create_database_engine()
     connection = await engine.connect()
     transaction = await connection.begin()
