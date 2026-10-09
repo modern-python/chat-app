@@ -9,7 +9,7 @@ license = "MIT"
 dependencies = [
     "litestar[jwt]",
     "lite-bootstrap[litestar-all]",
-    "modern-di-litestar>=3,<4",
+    "modern-di-litestar>=4,<5",
     "advanced-alchemy",
     "pydantic-settings",
     "granian[uvloop]",
@@ -35,7 +35,7 @@ dev = [
     "pytest-cov",
     "pytest-asyncio",
     "asgi_lifespan",
-    "modern-di-pytest>=3,<4",
+    "modern-di-pytest>=4,<5",
     "pytest-alembic",
 ]
 lint = ["ruff", "ty", "eof-fixer"]
