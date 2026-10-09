@@ -1,7 +1,7 @@
 import contextlib
 import typing
 import uuid
-from collections.abc import Iterator
+from collections.abc import Generator
 
 import sqlalchemy as sa
 from httpx import AsyncClient
@@ -41,7 +41,7 @@ async def send(client: AsyncClient, chat_id: int, text: str, key: uuid.UUID | No
 
 
 @contextlib.contextmanager
-def count_statements(session: AsyncSession) -> Iterator[list[str]]:
+def count_statements(session: AsyncSession) -> Generator[list[str]]:
     """Collect every SQL statement sent on the test connection behind ``session`` while the block runs."""
     connection: typing.Final = session.bind
     assert isinstance(connection, AsyncConnection)
