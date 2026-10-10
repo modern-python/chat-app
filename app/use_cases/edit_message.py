@@ -1,5 +1,5 @@
 import dataclasses
-import datetime
+import datetime as dt
 
 from db_retry import Transaction, postgres_retry
 
@@ -32,7 +32,7 @@ class EditMessageUseCase:
                 msg = "This message has been deleted"
                 raise ConflictError(msg)
             message.text = data.text
-            message.edited_at = datetime.datetime.now(tz=datetime.UTC)
+            message.edited_at = dt.datetime.now(tz=dt.UTC)
             updated = await self.messages_repository.update(message, item_id=message_id)
             await self.transaction.commit()
             # Safe inside the block: commit() ended the transaction, so __aexit__ only closes.
