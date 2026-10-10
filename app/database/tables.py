@@ -4,7 +4,7 @@ import typing
 import uuid
 
 import sqlalchemy as sa
-from advanced_alchemy.base import BigIntAuditBase, BigIntBase, orm_registry
+from advanced_alchemy.base import BigIntAuditBase, BigIntBase, DefaultBase, orm_registry
 from advanced_alchemy.types import GUID, DateTimeUTC
 from sqlalchemy import orm
 
@@ -94,3 +94,10 @@ class MessagesTable(BigIntBase):
     )
     edited_at: orm.Mapped[dt.datetime | None] = orm.mapped_column(DateTimeUTC(timezone=True), nullable=True)
     deleted_at: orm.Mapped[dt.datetime | None] = orm.mapped_column(DateTimeUTC(timezone=True), nullable=True)
+
+
+class RevokedTokensTable(DefaultBase):
+    __tablename__ = "revoked_tokens"
+
+    jti: orm.Mapped[str] = orm.mapped_column(sa.String(length=36), primary_key=True)
+    expires_at: orm.Mapped[dt.datetime] = orm.mapped_column(DateTimeUTC(timezone=True), index=True)
