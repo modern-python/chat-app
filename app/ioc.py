@@ -7,8 +7,10 @@ from app.database import resources as database_resources
 from app.repositories.chat_members_repository import ChatMembersRepository
 from app.repositories.chats_repository import ChatsRepository
 from app.repositories.messages_repository import MessagesRepository
+from app.repositories.revoked_tokens_repository import RevokedTokensRepository
 from app.repositories.users_repository import UsersRepository
 from app.use_cases.authenticate_user import AuthenticateUserUseCase
+from app.use_cases.check_token_revoked import CheckTokenRevokedUseCase
 from app.use_cases.create_chat import CreateChatUseCase
 from app.use_cases.create_message import CreateMessageUseCase
 from app.use_cases.delete_message import DeleteMessageUseCase
@@ -19,6 +21,7 @@ from app.use_cases.fetch_messages import FetchMessagesUseCase
 from app.use_cases.fetch_user import FetchUserUseCase
 from app.use_cases.mark_read import MarkReadUseCase
 from app.use_cases.register_user import RegisterUserUseCase
+from app.use_cases.revoke_token import RevokeTokenUseCase
 
 
 class Database(Group):
@@ -55,6 +58,10 @@ class Repositories(Group, scope=Scope.REQUEST):
         creator=MessagesRepository,
         kwargs={"session": Database.database_session, "auto_commit": False},
     )
+    revoked_tokens_repository = providers.Factory(
+        creator=RevokedTokensRepository,
+        kwargs={"session": Database.database_session, "auto_commit": False},
+    )
 
 
 class UseCases(Group, scope=Scope.REQUEST):
@@ -69,6 +76,8 @@ class UseCases(Group, scope=Scope.REQUEST):
     fetch_chats_use_case = providers.Factory(creator=FetchChatsUseCase)
     fetch_user_use_case = providers.Factory(creator=FetchUserUseCase)
     mark_read_use_case = providers.Factory(creator=MarkReadUseCase)
+    revoke_token_use_case = providers.Factory(creator=RevokeTokenUseCase)
+    check_token_revoked_use_case = providers.Factory(creator=CheckTokenRevokedUseCase)
 
 
 ALL_GROUPS: typing.Final[list[type[Group]]] = [Database, Repositories, UseCases]

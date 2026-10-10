@@ -6,11 +6,12 @@ from litestar.di import NamedDependency
 from litestar.exceptions import NotAuthorizedException
 from litestar.response import Response
 
-from app.api.auth import AuthedRequest, jwt_cookie_auth
+from app.api.auth import AuthedRequest, jwt_cookie_auth, new_token_id
 from app.schemas import api as schemas
 from app.use_cases.authenticate_user import AuthenticateUserUseCase
 from app.use_cases.fetch_user import FetchUserUseCase
 from app.use_cases.register_user import RegisterUserUseCase
+from app.use_cases.revoke_token import RevokeTokenUseCase
 
 
 @litestar.post("/auth/register/", status_code=status_codes.HTTP_201_CREATED, exclude_from_auth=True)
@@ -21,6 +22,7 @@ async def register(
     user: typing.Final = await register_user_use_case(data=data)
     return jwt_cookie_auth.login(
         identifier=str(user.id),
+        token_unique_jwt_id=new_token_id(),
         response_body=schemas.User.model_validate(user),
         response_status_code=status_codes.HTTP_201_CREATED,
     )
@@ -36,13 +38,18 @@ async def login(
         raise NotAuthorizedException(detail="Invalid username or password")
     return jwt_cookie_auth.login(
         identifier=str(user.id),
+        token_unique_jwt_id=new_token_id(),
         response_body=schemas.User.model_validate(user),
         response_status_code=status_codes.HTTP_200_OK,
     )
 
 
 @litestar.post("/auth/logout/", status_code=status_codes.HTTP_204_NO_CONTENT)
-async def logout() -> Response[None]:
+async def logout(
+    request: AuthedRequest,
+    revoke_token_use_case: NamedDependency[RevokeTokenUseCase],
+) -> Response[None]:
+    await revoke_token_use_case(jti=str(request.auth.jti), expires_at=request.auth.exp)
     response: typing.Final = Response(content=None, status_code=status_codes.HTTP_204_NO_CONTENT)
     response.delete_cookie(jwt_cookie_auth.key)
     return response
