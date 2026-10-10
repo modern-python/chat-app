@@ -1,5 +1,5 @@
 import dataclasses
-import datetime
+import datetime as dt
 
 from db_retry import Transaction, postgres_retry
 
@@ -31,7 +31,7 @@ class DeleteMessageUseCase:
             if message.deleted_at is not None:
                 # DELETE is idempotent; a second delete is not an error, unlike an edit.
                 return
-            message.deleted_at = datetime.datetime.now(tz=datetime.UTC)
+            message.deleted_at = dt.datetime.now(tz=dt.UTC)
             await self.messages_repository.update(message, item_id=message_id)
 
             chat = await self.chats_repository.get_one(id=message.chat_id)

@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 import uuid
 from collections.abc import Iterable
 from typing import Annotated, Any, Self
@@ -81,8 +81,8 @@ class Message(Base):
     chat_id: PositiveInt
     user_id: PositiveInt | None = None
     text: str
-    created_at: datetime.datetime
-    edited_at: datetime.datetime | None = None
+    created_at: dt.datetime
+    edited_at: dt.datetime | None = None
 
 
 class Messages(Collection[Message]):

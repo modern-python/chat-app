@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 
 import pytest
 import sqlalchemy as sa
@@ -141,5 +141,5 @@ async def test_retrieve_user_handler_resolves_an_actor_without_reading_the_datab
     foreign key. Nothing can reach that state today; a delete-user path would have to solve it
     alongside logout not revoking the JWT.
     """
-    token = Token(sub="42", exp=datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(minutes=5))
+    token = Token(sub="42", exp=dt.datetime.now(tz=dt.UTC) + dt.timedelta(minutes=5))
     assert await retrieve_user_handler(token, None) == Actor(id=42)  # ty: ignore[invalid-argument-type]

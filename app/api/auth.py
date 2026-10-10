@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 import typing
 
 import litestar
@@ -24,7 +24,7 @@ async def retrieve_user_handler(token: Token, _connection: ASGIConnection) -> Ac
 jwt_cookie_auth: typing.Final = JWTCookieAuth[Actor](
     retrieve_user_handler=retrieve_user_handler,
     token_secret=settings.jwt_secret,
-    default_token_expiration=datetime.timedelta(seconds=settings.jwt_lifetime_seconds),
+    default_token_expiration=dt.timedelta(seconds=settings.jwt_lifetime_seconds),
     secure=settings.jwt_cookie_secure,
     # Anchored: Litestar matches the joined patterns with an unanchored findall.
     exclude=[
