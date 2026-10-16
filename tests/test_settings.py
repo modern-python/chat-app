@@ -15,6 +15,10 @@ def test_sync_db_dsn_parsed_names_the_sync_driver() -> None:
     assert settings.sync_db_dsn_parsed.database == "dbname"
 
 
+def test_pool_pre_ping_is_off_by_default() -> None:
+    assert Settings().db_pool_pre_ping is False
+
+
 def test_api_bootstrapper_config_carries_service_identity() -> None:
     settings = Settings(service_name="svc", service_version="9.9.9")
     config = settings.api_bootstrapper_config

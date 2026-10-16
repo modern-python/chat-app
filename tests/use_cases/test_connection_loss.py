@@ -5,7 +5,7 @@ import asyncpg
 import modern_di
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from app import ioc
 from app.actor import Actor
@@ -49,8 +49,28 @@ async def lost_connection(request_container: modern_di.Container) -> None:
     await asyncio.wait_for(closed.wait(), timeout=5)
 
 
-@pytest.mark.usefixtures("lost_connection")
-@pytest.mark.parametrize(
+@pytest.fixture
+async def lost_pooled_connection(request_container: modern_di.Container) -> None:
+    """Leave the engine's pool holding one idle connection whose backend was terminated."""
+    engine: typing.Final = request_container.resolve_provider(ioc.Database.database_engine)
+    assert isinstance(engine, AsyncEngine)
+    async with engine.connect() as connection:
+        pid: typing.Final = await connection.scalar(sa.text("SELECT pg_backend_pid()"))
+        driver_connection: typing.Final = (await connection.get_raw_connection()).driver_connection
+        assert driver_connection is not None
+        closed: typing.Final = asyncio.Event()
+        driver_connection.add_termination_listener(lambda _: closed.set())
+    killer: typing.Final = await asyncpg.connect(
+        engine.url.set(drivername="postgresql").render_as_string(hide_password=False)
+    )
+    try:
+        await killer.execute("SELECT pg_terminate_backend($1)", pid)
+    finally:
+        await killer.close()
+    await asyncio.wait_for(closed.wait(), timeout=5)
+
+
+READ_USE_CASES: typing.Final = pytest.mark.parametrize(
     ("provider", "kwargs", "expected"),
     [
         (ioc.UseCases.authenticate_user_use_case, {"username": "nobody", "password": "hunter2hunter2"}, None),
@@ -59,7 +79,23 @@ async def lost_connection(request_container: modern_di.Container) -> None:
         (ioc.UseCases.fetch_user_use_case, {"actor": UNKNOWN_ACTOR}, None),
     ],
 )
+
+
+@pytest.mark.usefixtures("lost_connection")
+@READ_USE_CASES
 async def test_read_use_case_recovers_from_a_lost_connection(
+    request_container: modern_di.Container,
+    provider: modern_di.providers.Factory[typing.Any],
+    kwargs: dict[str, typing.Any],
+    expected: object,
+) -> None:
+    use_case: typing.Final = request_container.resolve_provider(provider)
+    assert await use_case(**kwargs) == expected
+
+
+@pytest.mark.usefixtures("lost_pooled_connection")
+@READ_USE_CASES
+async def test_read_use_case_recovers_from_a_connection_lost_while_pooled(
     request_container: modern_di.Container,
     provider: modern_di.providers.Factory[typing.Any],
     kwargs: dict[str, typing.Any],
