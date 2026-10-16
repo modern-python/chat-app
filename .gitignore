@@ -3,6 +3,5 @@
 __pycache__/
 *.py[cod]
 .coverage
-uv.lock
 .superpowers/
 .scratch/
