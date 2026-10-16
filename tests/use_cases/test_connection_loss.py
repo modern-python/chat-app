@@ -1,12 +1,10 @@
 import asyncio
 import typing
 
-import advanced_alchemy.exceptions
 import asyncpg
 import modern_di
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.exc import InterfaceError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import ioc
@@ -14,12 +12,6 @@ from app.actor import Actor
 from app.database.resources import create_database_engine
 from app.exceptions import PermissionDeniedError
 
-
-pytestmark = pytest.mark.xfail(
-    raises=(advanced_alchemy.exceptions.IntegrityError, InterfaceError),
-    reason="the released db-retry does not retry a closed connection; modern-python/db-retry#69 does",
-    strict=True,
-)
 
 UNKNOWN_ACTOR: typing.Final = Actor(id=-1)
 
