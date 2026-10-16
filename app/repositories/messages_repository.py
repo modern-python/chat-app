@@ -6,6 +6,7 @@ import sqlalchemy as sa
 from advanced_alchemy.filters import LimitOffset
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
+from sqlalchemy.dialects import postgresql
 
 from app.database import tables
 
@@ -16,8 +17,22 @@ class MessagesRepository(SQLAlchemyAsyncRepositoryService[tables.MessagesTable])
 
     repository_type = BaseRepository
 
-    async def fetch_by_idempotency_key(self, chat_id: int, idempotency_key: uuid.UUID) -> tables.MessagesTable | None:
-        return await self.get_one_or_none(chat_id=chat_id, idempotency_key=idempotency_key)
+    async def get_or_create(
+        self, *, chat_id: int, user_id: int, idempotency_key: uuid.UUID, text: str
+    ) -> tuple[tables.MessagesTable, bool]:
+        statement = postgresql.insert(tables.MessagesTable).values(
+            chat_id=chat_id, user_id=user_id, idempotency_key=idempotency_key, text=text
+        )
+        statement = statement.on_conflict_do_update(
+            constraint="uk_messages_chat_id_idempotency_key",
+            set_={"idempotency_key": statement.excluded.idempotency_key},
+        )
+        # xmax is 0 only on a row version this statement inserted.
+        created: typing.Final = sa.literal_column("xmax = 0", sa.Boolean)
+        message, was_created = (
+            await self.repository.session.execute(statement.returning(tables.MessagesTable, created))
+        ).one()
+        return message, was_created
 
     async def fetch_latest_active(self, chat_id: int) -> tables.MessagesTable | None:
         """Return the newest non-deleted message in a chat, or None if none remains.
