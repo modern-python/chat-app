@@ -1,6 +1,7 @@
 import asyncio
 import typing
 
+from db_retry import Transaction
 from sqlalchemy.ext import asyncio as sa
 
 from app.settings import settings
@@ -34,3 +35,10 @@ def create_session(engine: sa.AsyncEngine | sa.AsyncConnection) -> sa.AsyncSessi
 async def close_session(session: sa.AsyncSession) -> None:
     task: typing.Final = asyncio.create_task(session.close())
     await asyncio.shield(task)
+
+
+def create_autocommit_transaction(session: sa.AsyncSession) -> Transaction:
+    # Isolation level can only be set before the session holds a connection; test sessions are bound to one.
+    if isinstance(session.bind, sa.AsyncEngine) and not session.in_transaction():
+        return Transaction(session=session, isolation_level="AUTOCOMMIT")
+    return Transaction(session=session)
