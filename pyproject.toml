@@ -14,7 +14,7 @@ dependencies = [
     "pydantic-settings",
     "granian[uvloop]",
     "argon2-cffi",
-    "db-retry",
+    "db-retry>=0.7.1",
     # database
     "alembic",
     "alembic-postgresql-enum",
