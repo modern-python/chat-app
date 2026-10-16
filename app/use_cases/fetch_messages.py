@@ -2,7 +2,7 @@ import dataclasses
 import typing
 from collections.abc import Sequence
 
-from db_retry import postgres_retry
+from db_retry import Transaction, postgres_retry
 
 from app.actor import Actor
 from app.database import tables
@@ -16,6 +16,7 @@ MAX_PAGE_SIZE: typing.Final = 100
 
 @dataclasses.dataclass(kw_only=True, frozen=True, slots=True)
 class FetchMessagesUseCase:
+    transaction: Transaction
     chat_members_repository: ChatMembersRepository
     messages_repository: MessagesRepository
 
@@ -29,15 +30,18 @@ class FetchMessagesUseCase:
         after_id: int | None = None,
         limit: int = 50,
     ) -> Sequence[tables.MessagesTable]:
-        if not await self.chat_members_repository.is_member(chat_id, actor.id):
-            msg = "Not a member of this chat"
-            raise PermissionDeniedError(msg)
-        if before_id is not None and after_id is not None:
-            msg = "before_id and after_id are mutually exclusive"
-            raise ValidationError(msg)
-        if limit < 1:
-            msg = "limit must be at least 1"
-            raise ValidationError(msg)
-        return await self.messages_repository.list_page(
-            chat_id, before_id=before_id, after_id=after_id, limit=min(limit, MAX_PAGE_SIZE)
-        )
+        async with self.transaction:
+            if not await self.chat_members_repository.is_member(chat_id, actor.id):
+                msg = "Not a member of this chat"
+                raise PermissionDeniedError(msg)
+            if before_id is not None and after_id is not None:
+                msg = "before_id and after_id are mutually exclusive"
+                raise ValidationError(msg)
+            if limit < 1:
+                msg = "limit must be at least 1"
+                raise ValidationError(msg)
+            messages: typing.Final = await self.messages_repository.list_page(
+                chat_id, before_id=before_id, after_id=after_id, limit=min(limit, MAX_PAGE_SIZE)
+            )
+            await self.transaction.commit()
+        return messages
