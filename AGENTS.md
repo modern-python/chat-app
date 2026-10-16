@@ -30,6 +30,11 @@ template breaks the transaction model or the DI wiring.
    `Transaction.__aexit__`'s unconditional rollback-on-open-transaction
    behavior (returning a loaded ORM object from inside an uncommitted `async
    with self.transaction:` block detaches it).
+   Read-only use cases open a `Transaction` too and commit before returning.
+   `@postgres_retry` cannot roll back a session it does not see, so a retry
+   on a session still inside the failed transaction ends in
+   `PendingRollbackError`; the `Transaction` exit is what rolls it back.
+   `tests/use_cases/test_connection_loss.py` pins this.
 
 ## Commands
 
@@ -103,7 +108,7 @@ a session, a transaction or a repository directly. Provider scopes:
   the engine.
 - `Database.database_session` — request-scoped, finalizer closes the session.
 - `Database.transaction` — request-scoped `db_retry.Transaction`, the object
-  every write-side use case wraps its commit in.
+  every use case wraps its work in.
 - `Repositories.*` — request-scoped, `auto_commit=False` (see above).
 - `UseCases.*` — request-scoped, one class per operation.
 
