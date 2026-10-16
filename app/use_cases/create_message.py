@@ -24,16 +24,19 @@ class CreateMessageUseCase:
     async def __call__(
         self, *, actor: Actor, chat_id: int, data: SendMessageRequest
     ) -> tuple[tables.MessagesTable, bool]:
-        if not await self.chat_members_repository.is_member(chat_id, actor.id):
-            msg = "Not a member of this chat"
-            raise PermissionDeniedError(msg)
-
-        existing: typing.Final = await self.messages_repository.fetch_by_idempotency_key(chat_id, data.idempotency_key)
-        if existing is not None:
-            return existing, False
-
         message: tables.MessagesTable | None = None
         async with self.transaction:
+            if not await self.chat_members_repository.is_member(chat_id, actor.id):
+                msg = "Not a member of this chat"
+                raise PermissionDeniedError(msg)
+
+            existing: typing.Final = await self.messages_repository.fetch_by_idempotency_key(
+                chat_id, data.idempotency_key
+            )
+            if existing is not None:
+                await self.transaction.commit()
+                return existing, False
+
             try:
                 message = await self.messages_repository.create(
                     tables.MessagesTable(
