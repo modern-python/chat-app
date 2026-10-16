@@ -15,7 +15,7 @@ ENV UV_PROJECT_ENVIRONMENT=/code/.venv \
 
 WORKDIR /code
 
-COPY pyproject.toml .
+COPY pyproject.toml uv.lock ./
 
 RUN uv sync --all-extras --all-groups --no-install-project
 
