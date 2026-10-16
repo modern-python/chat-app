@@ -15,6 +15,14 @@ from app.schemas.api import CreateChatRequest
 _DIRECT_CHAT_MEMBER_COUNT: typing.Final = 2
 
 
+def _direct_key(member_ids: set[int]) -> str:
+    if len(member_ids) != _DIRECT_CHAT_MEMBER_COUNT:
+        msg = "A direct chat must have exactly two distinct members"
+        raise ValidationError(msg)
+    low, high = sorted(member_ids)
+    return tables.build_direct_key(low, high)
+
+
 @dataclasses.dataclass(kw_only=True, frozen=True, slots=True)
 class CreateChatUseCase:
     transaction: Transaction
@@ -24,22 +32,16 @@ class CreateChatUseCase:
     @postgres_retry
     async def __call__(self, *, actor: Actor, data: CreateChatRequest) -> tuple[tables.ChatsTable, bool]:
         member_ids: typing.Final = {actor.id, *data.member_ids}
-        direct_key: str | None = None
-
-        if data.chat_type is tables.ChatType.DIRECT:
-            if len(member_ids) != _DIRECT_CHAT_MEMBER_COUNT:
-                msg = "A direct chat must have exactly two distinct members"
-                raise ValidationError(msg)
-            low, high = sorted(member_ids)
-            direct_key = tables.build_direct_key(low, high)
-
-            # Outside the block: __aexit__ rolls back an uncommitted transaction and detaches this.
-            existing = await self.chats_repository.fetch_direct_by_key(direct_key)
-            if existing is not None:
-                return existing, False
+        direct_key: typing.Final = _direct_key(member_ids) if data.chat_type is tables.ChatType.DIRECT else None
 
         chat: tables.ChatsTable | None = None
         async with self.transaction:
+            if direct_key is not None:
+                existing = await self.chats_repository.fetch_direct_by_key(direct_key)
+                if existing is not None:
+                    await self.transaction.commit()
+                    return existing, False
+
             try:
                 chat = await self.chats_repository.create(
                     tables.ChatsTable(
