@@ -6,8 +6,9 @@ its first statement, SQLAlchemy marks the error `connection_invalidated`, and
 rejected because it adds a BEGIN, a ping and a ROLLBACK to every checkout, and a
 request makes two checkouts. Measured on `GET /api/auth/me/` and the message
 list, it cost 7 to 35% of throughput on a local network and 40 to 57% with 1 ms
-of database latency. The price of the retry is a rule the code must keep: every
-query a retried use case runs goes inside its `Transaction` block, because a
-query outside it leaves the session in a dead transaction that the retry cannot
-roll back. `tests/use_cases/test_connection_loss.py` kills a connection both
-while it is idle in the pool and while a session holds it.
+of database latency. The retry needs one rule: every query a retried use case
+runs goes inside its `Transaction` block. Entering `Transaction` rolls back a
+session whose connection was lost, so a query after the block is recovered, but
+a query before it still fails the retry.
+`tests/use_cases/test_connection_loss.py` kills a connection both while it is
+idle in the pool and while a session holds it.
