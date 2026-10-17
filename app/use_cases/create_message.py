@@ -31,10 +31,6 @@ class CreateMessageUseCase:
                 chat_id=chat_id, user_id=actor.id, idempotency_key=data.idempotency_key, text=data.text
             )
             if created:
-                await self.chats_repository.update(
-                    tables.ChatsTable(id=chat_id, last_message_id=message.id),
-                    item_id=chat_id,
-                    attribute_names=["last_message_id"],
-                )
+                await self.chats_repository.set_last_message(chat_id, message.id)
             await self.transaction.commit()
         return message, created

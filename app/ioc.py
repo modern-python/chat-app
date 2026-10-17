@@ -39,6 +39,15 @@ class Database(Group):
         creator=Transaction,
         kwargs={"session": database_session},
     )
+    autocommit_isolation_level = providers.Factory(
+        creator=database_resources.autocommit_isolation_level, bound_type=None
+    )
+    autocommit_transaction = providers.Factory(
+        scope=Scope.REQUEST,
+        creator=Transaction,
+        bound_type=None,
+        kwargs={"session": database_session, "isolation_level": autocommit_isolation_level},
+    )
 
 
 class Repositories(Group, scope=Scope.REQUEST):
@@ -77,7 +86,9 @@ class UseCases(Group, scope=Scope.REQUEST):
     fetch_user_use_case = providers.Factory(creator=FetchUserUseCase)
     mark_read_use_case = providers.Factory(creator=MarkReadUseCase)
     revoke_token_use_case = providers.Factory(creator=RevokeTokenUseCase)
-    check_token_revoked_use_case = providers.Factory(creator=CheckTokenRevokedUseCase)
+    check_token_revoked_use_case = providers.Factory(
+        creator=CheckTokenRevokedUseCase, kwargs={"transaction": Database.autocommit_transaction}
+    )
 
 
 ALL_GROUPS: typing.Final[list[type[Group]]] = [Database, Repositories, UseCases]

@@ -38,12 +38,13 @@ class CreateChatUseCase:
                 )
             else:
                 chat = await self.chats_repository.create(
-                    tables.ChatsTable(chat_type=data.chat_type, title=data.title, created_by_id=actor.id)
+                    tables.ChatsTable(chat_type=data.chat_type, title=data.title, created_by_id=actor.id),
+                    auto_refresh=False,
                 )
                 created = True
             if created:
-                for user_id in sorted(member_ids):
-                    await self.chat_members_repository.create(tables.ChatMembersTable(chat_id=chat.id, user_id=user_id))
-            chat_with_members: typing.Final = await self.chats_repository.fetch_with_members(chat.id)
+                await self.chat_members_repository.add_members(chat, sorted(member_ids))
+            else:
+                chat = await self.chats_repository.fetch_with_members(chat.id)
             await self.transaction.commit()
-        return chat_with_members, created
+        return chat, created

@@ -109,6 +109,10 @@ a session, a transaction or a repository directly. Provider scopes:
 - `Database.database_session` — request-scoped, finalizer closes the session.
 - `Database.transaction` — request-scoped `db_retry.Transaction`, the object
   every use case wraps its work in.
+- `Database.autocommit_transaction` — the same, opened at `AUTOCOMMIT` so the
+  token revocation check sends no BEGIN or COMMIT. `rolled_back_db_session`
+  overrides `Database.autocommit_isolation_level` to `None`, because switching
+  the shared test connection would roll back its outer transaction.
 - `Repositories.*` — request-scoped, `auto_commit=False` (see above).
 - `UseCases.*` — request-scoped, one class per operation.
 

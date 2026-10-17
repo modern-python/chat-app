@@ -71,14 +71,15 @@ async def lost_pooled_connection(request_container: modern_di.Container) -> None
     await _terminate_backend(engine, *watched)
 
 
-READ_USE_CASES: typing.Final = pytest.mark.parametrize(
+_READ_CASES: typing.Final = [
+    (ioc.UseCases.authenticate_user_use_case, {"username": "nobody", "password": "hunter2hunter2"}, None),
+    (ioc.UseCases.fetch_chats_use_case, {"actor": UNKNOWN_ACTOR}, []),
+    (ioc.UseCases.fetch_user_use_case, {"actor": UNKNOWN_ACTOR}, None),
+]
+READ_USE_CASES: typing.Final = pytest.mark.parametrize(("provider", "kwargs", "expected"), _READ_CASES)
+READ_USE_CASES_WITH_REVOCATION_CHECK: typing.Final = pytest.mark.parametrize(
     ("provider", "kwargs", "expected"),
-    [
-        (ioc.UseCases.authenticate_user_use_case, {"username": "nobody", "password": "hunter2hunter2"}, None),
-        (ioc.UseCases.check_token_revoked_use_case, {"jti": "unknown"}, False),
-        (ioc.UseCases.fetch_chats_use_case, {"actor": UNKNOWN_ACTOR}, []),
-        (ioc.UseCases.fetch_user_use_case, {"actor": UNKNOWN_ACTOR}, None),
-    ],
+    [*_READ_CASES, (ioc.UseCases.check_token_revoked_use_case, {"jti": "unknown"}, False)],
 )
 
 
@@ -95,7 +96,7 @@ async def test_read_use_case_recovers_from_a_lost_connection(
 
 
 @pytest.mark.usefixtures("lost_pooled_connection")
-@READ_USE_CASES
+@READ_USE_CASES_WITH_REVOCATION_CHECK
 async def test_read_use_case_recovers_from_a_connection_lost_while_pooled(
     request_container: modern_di.Container,
     provider: modern_di.providers.Factory[typing.Any],

@@ -46,6 +46,8 @@ async def rolled_back_db_session(di_container: modern_di.Container) -> collectio
     connection = await engine.connect()
     transaction = await connection.begin()
     di_container.override(ioc.Database.database_engine, connection)
+    # Switching the shared connection to AUTOCOMMIT would roll back the outer transaction.
+    di_container.override(ioc.Database.autocommit_isolation_level, None)
 
     try:
         yield create_session(connection)
@@ -63,6 +65,7 @@ async def rolled_back_db_session(di_container: modern_di.Container) -> collectio
             await connection.close()
             await engine.dispose()
             di_container.reset_override(ioc.Database.database_engine)
+            di_container.reset_override(ioc.Database.autocommit_isolation_level)
 
 
 @pytest.fixture

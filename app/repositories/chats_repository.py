@@ -1,3 +1,4 @@
+import datetime as dt
 import typing
 from collections.abc import Sequence
 
@@ -11,6 +12,14 @@ from sqlalchemy.dialects import postgresql
 from app.database import tables
 
 
+_WITH_MEMBERS: typing.Final[dict[str, typing.Any]] = {
+    "load": [orm.joinedload(tables.ChatsTable.members)],
+    "uniquify": True,
+    # A chat already in the identity map keeps its noload members without this.
+    "execution_options": {"populate_existing": True},
+}
+
+
 class ChatsRepository(SQLAlchemyAsyncRepositoryService[tables.ChatsTable]):
     class BaseRepository(SQLAlchemyAsyncRepository[tables.ChatsTable]):
         model_type = tables.ChatsTable
@@ -18,11 +27,30 @@ class ChatsRepository(SQLAlchemyAsyncRepositoryService[tables.ChatsTable]):
     repository_type = BaseRepository
 
     async def fetch_with_members(self, chat_id: int) -> tables.ChatsTable:
-        return await self.get_one(
-            tables.ChatsTable.id == chat_id,
-            load=[orm.selectinload(tables.ChatsTable.members)],
-            # A chat already in the identity map keeps its noload members without this.
-            execution_options={"populate_existing": True},
+        return await self.get_one(tables.ChatsTable.id == chat_id, **_WITH_MEMBERS)
+
+    async def find_with_members(self, chat_id: int) -> tables.ChatsTable | None:
+        return await self.get_one_or_none(tables.ChatsTable.id == chat_id, **_WITH_MEMBERS)
+
+    async def set_last_message(self, chat_id: int, message_id: int) -> None:
+        await self.repository.session.execute(
+            sa.update(tables.ChatsTable)
+            .where(tables.ChatsTable.id == chat_id)
+            .values(last_message_id=message_id, updated_at=dt.datetime.now(tz=dt.UTC))
+        )
+
+    async def repoint_last_message(self, chat_id: int, deleted_message_id: int) -> None:
+        newest_active: typing.Final = (
+            sa.select(tables.MessagesTable.id)
+            .where(tables.MessagesTable.chat_id == chat_id, tables.MessagesTable.deleted_at.is_(None))
+            .order_by(tables.MessagesTable.id.desc())
+            .limit(1)
+            .scalar_subquery()
+        )
+        await self.repository.session.execute(
+            sa.update(tables.ChatsTable)
+            .where(tables.ChatsTable.id == chat_id, tables.ChatsTable.last_message_id == deleted_message_id)
+            .values(last_message_id=newest_active, updated_at=dt.datetime.now(tz=dt.UTC))
         )
 
     async def get_or_create_direct(self, *, direct_key: str, created_by_id: int) -> tuple[tables.ChatsTable, bool]:
@@ -59,7 +87,7 @@ class ChatsRepository(SQLAlchemyAsyncRepositoryService[tables.ChatsTable]):
             sa.select(tables.ChatsTable)
             .options(
                 orm.with_expression(tables.ChatsTable.unread_count, unread_count),
-                orm.selectinload(tables.ChatsTable.last_message),
+                orm.joinedload(tables.ChatsTable.last_message),
             )
             .join(tables.ChatMembersTable, tables.ChatMembersTable.chat_id == tables.ChatsTable.id)
             .where(tables.ChatMembersTable.user_id == user_id)
