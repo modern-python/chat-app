@@ -75,15 +75,23 @@ class Repositories(Group, scope=Scope.REQUEST):
 
 class UseCases(Group, scope=Scope.REQUEST):
     register_user_use_case = providers.Factory(creator=RegisterUserUseCase)
-    authenticate_user_use_case = providers.Factory(creator=AuthenticateUserUseCase)
+    authenticate_user_use_case = providers.Factory(
+        creator=AuthenticateUserUseCase, kwargs={"transaction": Database.autocommit_transaction}
+    )
     create_chat_use_case = providers.Factory(creator=CreateChatUseCase)
-    fetch_chat_use_case = providers.Factory(creator=FetchChatUseCase)
+    fetch_chat_use_case = providers.Factory(
+        creator=FetchChatUseCase, kwargs={"transaction": Database.autocommit_transaction}
+    )
     create_message_use_case = providers.Factory(creator=CreateMessageUseCase)
     fetch_messages_use_case = providers.Factory(creator=FetchMessagesUseCase)
     edit_message_use_case = providers.Factory(creator=EditMessageUseCase)
     delete_message_use_case = providers.Factory(creator=DeleteMessageUseCase)
-    fetch_chats_use_case = providers.Factory(creator=FetchChatsUseCase)
-    fetch_user_use_case = providers.Factory(creator=FetchUserUseCase)
+    fetch_chats_use_case = providers.Factory(
+        creator=FetchChatsUseCase, kwargs={"transaction": Database.autocommit_transaction}
+    )
+    fetch_user_use_case = providers.Factory(
+        creator=FetchUserUseCase, kwargs={"transaction": Database.autocommit_transaction}
+    )
     mark_read_use_case = providers.Factory(creator=MarkReadUseCase)
     revoke_token_use_case = providers.Factory(creator=RevokeTokenUseCase)
     check_token_revoked_use_case = providers.Factory(
