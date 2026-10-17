@@ -2,10 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-`chat-app` was bootstrapped from `litestar-sqlalchemy-template`. It is **not**
-the template with new routes — three things below differ from what the
-template teaches, and getting any of them wrong by pattern-matching on the
-template breaks the transaction model or the DI wiring.
+`chat-app` was bootstrapped from `litestar-sqlalchemy-template`, but three
+things below differ from what the template teaches. Getting any of them wrong
+by pattern-matching on the template breaks the transaction model or the DI
+wiring.
 
 ## The three things most likely to be got wrong
 
@@ -16,13 +16,13 @@ template breaks the transaction model or the DI wiring.
    example.
 2. **Repositories run `auto_commit=False`.** Every `*_repository` provider in
    `app/ioc.py` is constructed with `kwargs={"session": ..., "auto_commit":
-   False}` — the opposite of the template's `auto_commit=True`. A repository
+   False}`, the opposite of the template's `auto_commit=True`. A repository
    here never commits on its own.
 3. **Use cases own the transaction boundary, not repositories.** Every use
    case that writes wraps its work in `async with self.transaction:` (a
    `db_retry.Transaction`) and calls `await self.transaction.commit()`
-   explicitly once every write that must land together has been made — e.g.
-   `CreateMessageUseCase` commits the new message row and the
+   explicitly once every write that must land together has been made. For
+   example, `CreateMessageUseCase` commits the new message row and the
    `chats.last_message_id` update together. This exists because a single
    operation can span more than one repository write and they must succeed or
    fail as a unit; giving that back to individually auto-committing
@@ -38,12 +38,12 @@ template breaks the transaction model or the DI wiring.
 
 ## Commands
 
-Recipes live in the `justfile` — run `just --list` to see them; this section
+Recipes live in the `justfile`; run `just --list` to see them. This section
 only covers what isn't obvious from the recipe names.
 
 Almost everything runs through Docker Compose: the app and Postgres come up
 together, and running tests/migrations outside Docker is **not** the
-supported path (`just install` and `just lint` are the exceptions — they run
+supported path (the exceptions are `just install` and `just lint`, which run
 on the host). Inside the container, raw commands look like `uv run pytest ...`,
 `uv run alembic ...`.
 
@@ -52,18 +52,18 @@ on the host). Inside the container, raw commands look like `uv run pytest ...`,
   e.g. `just test tests/use_cases/test_create_chat.py -k race -x`.
 - `just test-migrations` runs the `pytest-alembic` suite (`tests/migrations/`):
   single head, upgrade, per-revision up/down consistency, and
-  model-definitions-match-DDL — the last being `alembic check` as a test. That
+  model-definitions-match-DDL, the last being `alembic check` as a test. That
   directory is excluded from `just test` (`--ignore` in `addopts`, and from
   `coverage`'s `omit`) because it cycles the schema out from under the
   transaction-rollback fixture, so it needs the `--override-ini=addopts=` the
   recipe passes. CI runs both.
 - Enum columns are native Postgres enums, and `alembic-postgresql-enum` is
-  imported by `migrations/env.py` for its autogenerate hooks — that is what
-  renders `CREATE TYPE` / `ALTER TYPE ... ADD VALUE` / `op.sync_enum_values`
+  imported by `migrations/env.py` for its autogenerate hooks. Those hooks
+  render `CREATE TYPE` / `ALTER TYPE ... ADD VALUE` / `op.sync_enum_values`
   instead of silently missing them. Add or rename an enum value and
   `just migration` writes the type change for you.
-- `just migration "message"` takes a **single positional argument** — not a
-  `-m` flag — quoted so a multi-word message survives as one token (the
+- `just migration "message"` takes a **single positional argument** (not a
+  `-m` flag), quoted so a multi-word message survives as one token (the
   recipe shell-quotes it with `quote()` before handing it to `alembic
   revision --autogenerate -m`). It runs against an already-upgraded DB; the
   recipe enforces that by upgrading first, so don't run autogen by hand.
@@ -102,28 +102,28 @@ parameters typed `NamedDependency[SomeUseCase]`; nothing wires them by hand.
 `build_app` passes `autowired_groups=[ioc.UseCases]` to the plugin, which
 registers one Litestar dependency per provider on that group, named after the
 provider attribute (`create_chat_use_case`, ...). `Database` and `Repositories`
-are deliberately **not** autowired — a route handler has no business resolving
+are deliberately **not** autowired: a route handler has no business resolving
 a session, a transaction or a repository directly. Provider scopes:
-- `Database.database_engine` — app-scoped factory, `cache=` finalizer disposes
+- `Database.database_engine`: app-scoped factory, `cache=` finalizer disposes
   the engine.
-- `Database.database_session` — request-scoped, finalizer closes the session.
-- `Database.transaction` — request-scoped `db_retry.Transaction`, the object
+- `Database.database_session`: request-scoped, finalizer closes the session.
+- `Database.transaction`: request-scoped `db_retry.Transaction`, the object
   every use case wraps its work in.
-- `Database.autocommit_transaction` — the same, opened at `AUTOCOMMIT` so a
+- `Database.autocommit_transaction`: the same, opened at `AUTOCOMMIT` so a
   use case that sends exactly one read statement (login, `GET /auth/me/`, the
   chat list and detail, the token revocation check) sends no BEGIN or COMMIT.
   Reads of two or more statements keep `Database.transaction`, so they see
   one snapshot. `rolled_back_db_session`
   overrides `Database.autocommit_isolation_level` to `None`, because switching
   the shared test connection would roll back its outer transaction.
-- `Repositories.*` — request-scoped, `auto_commit=False` (see above).
-- `UseCases.*` — request-scoped, one class per operation.
+- `Repositories.*`: request-scoped, `auto_commit=False` (see above).
+- `UseCases.*`: request-scoped, one class per operation.
 
 **Persistence**: Models inherit `advanced_alchemy.base.BigIntAuditBase` /
 `BigIntBase`. `app/database/tables.py` shares metadata with
 `orm.DeclarativeBase.metadata` (`METADATA = orm_registry.metadata;
-orm.DeclarativeBase.metadata = METADATA`) so Alembic autogen sees everything —
-this line mutates a third-party base class at import time, because otherwise
+orm.DeclarativeBase.metadata = METADATA`) so Alembic autogen sees everything.
+This line mutates a third-party base class at import time, because otherwise
 models register on `orm.DeclarativeBase`'s own metadata and autogen sees no
 tables at all. Repositories are
 `SQLAlchemyAsyncRepositoryService[Model]` with a nested
@@ -134,13 +134,13 @@ template, but every service here is constructed with `auto_commit=False`.
 starts a transaction, then **overrides** `Database.database_engine` in the DI
 container to return that connection; `create_session`'s
 `join_transaction_mode="create_savepoint"` is what makes every session opened
-against it — fixture or route handler — nest as a savepoint instead of
+against it (fixture or route handler) nest as a savepoint instead of
 committing past the outer transaction. Teardown rolls the outer transaction
 back. `app`/`client` fixtures build the real app and run it through
 `httpx.ASGITransport` + `asgi_lifespan.LifespanManager`.
 `modern_di_pytest.expose(ioc.Repositories, ioc.UseCases,
 container_fixture="request_container")` (`tests/use_cases/conftest.py`)
-exposes every repository/use case provider as a same-named pytest fixture —
+exposes every repository/use case provider as a same-named pytest fixture;
 the template predates this and hand-assembles dependencies instead. The
 concurrent-create tests in `tests/use_cases/test_create_chat.py` and
 `tests/use_cases/test_create_message.py` use a second real connection: it holds
@@ -148,8 +148,8 @@ an uncommitted insert, and the test polls `pg_stat_activity` until the use case
 waits on its lock. The invariant each one pins is in its docstring.
 
 **Migrations**: `migrations/env.py` reads the shared `METADATA` and rewrites
-the DSN driver from `postgresql+asyncpg` → `postgresql` (Alembic uses sync
-psycopg2). Always run autogen against an upgraded DB — `just migration`
+the DSN driver from `postgresql+asyncpg` to `postgresql` (Alembic uses sync
+psycopg2). Always run autogen against an upgraded DB; `just migration`
 enforces this.
 
 **Settings** (`app/settings.py`): `pydantic_settings.BaseSettings` reads from
@@ -174,8 +174,8 @@ env vars (see `docker-compose.yml`). `api_bootstrapper_config` builds the
   frozen=True, slots=True)` per operation with an async `__call__` decorated
   `@db_retry.postgres_retry`. Shared authorization logic that more than one
   use case needs (e.g. the author-and-member gate for edit/delete) lives in a
-  plain module-level function, not a base class — see
-  `app/use_cases/message_authorization.py`.
+  plain module-level function, not a base class (see
+  `app/use_cases/message_authorization.py`).
 - Pydantic schemas in `app/schemas/api.py` use `from_attributes=True` (via
   `Base`) so they validate directly from ORM instances
   (`schemas.X.model_validate(orm_instance)`). Collection responses go through
@@ -186,22 +186,22 @@ env vars (see `docker-compose.yml`). `api_bootstrapper_config` builds the
   exceptions (`NotFoundError`, `DuplicateKeyError`, `ForeignKeyError`).
 - **Comments.** None, unless the code would read as a bug without one; then a
   single line. Rationale, design decisions and "why not X" belong in
-  the PR body, never in the source — that is where such reasoning is reviewed
-  and kept, and a comment restating it goes stale in place.
+  the PR body, never in the source. The PR body is where such reasoning is
+  reviewed and kept, and a comment restating it goes stale in place.
   What survives in `app/` today is the whole permitted category: a setting that
   looks arbitrary (`join_transaction_mode`, `populate_existing`,
   `capture_parameters=False`), an `orm.foreign()` on a column with no
   `ForeignKey`, a `return` from inside a transaction block, discarded work that
   is not dead code (`AuthenticateUserUseCase`'s hash-anyway). Alembic's own
-  `# ###` autogenerate markers stay — they are regenerated on every migration.
+  `# ###` autogenerate markers stay, since they are regenerated on every migration.
 - **Coverage.** The suite runs at `--cov-fail-under=100` and no `# pragma: no cover`
   appears anywhere. The only exemptions are structural: `[tool.coverage.run] omit`
   for files the default run never imports, and `exclude_also` for
   `if typing.TYPE_CHECKING:`. A branch that looks untestable gets a test that
   produces its condition for real, such as the concurrent create tests'
   second connection holding an uncommitted insert.
-- `ruff` is configured with `select = ["ALL"]` and a line length of 120 —
-  expect strict lint. Type-check with `ty`.
+- `ruff` is configured with `select = ["ALL"]` and a line length of 120,
+  so expect strict lint. Type-check with `ty`.
 
 ## Vocabulary
 
