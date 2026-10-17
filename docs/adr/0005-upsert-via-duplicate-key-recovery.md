@@ -1,3 +1,7 @@
+---
+superseded_by: 0013-direct-chat-create-is-one-upsert
+---
+
 # Upsert by recovering from DuplicateKeyError
 
 `CreateChatUseCase` reads first to see whether the direct chat already exists

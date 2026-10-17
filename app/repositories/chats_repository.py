@@ -2,9 +2,11 @@ import typing
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from advanced_alchemy.repository import SQLAlchemyAsyncRepository
+from advanced_alchemy.exceptions import wrap_sqlalchemy_exception
+from advanced_alchemy.repository import DEFAULT_ERROR_MESSAGE_TEMPLATES, SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 from sqlalchemy import orm
+from sqlalchemy.dialects import postgresql
 
 from app.database import tables
 
@@ -21,11 +23,22 @@ class ChatsRepository(SQLAlchemyAsyncRepositoryService[tables.ChatsTable]):
             load=[orm.selectinload(tables.ChatsTable.members)],
         )
 
-    async def fetch_direct_by_key(self, direct_key: str) -> tables.ChatsTable | None:
-        return await self.get_one_or_none(
-            tables.ChatsTable.direct_key == direct_key,
-            load=[orm.selectinload(tables.ChatsTable.members)],
+    async def get_or_create_direct(self, *, direct_key: str, created_by_id: int) -> tuple[tables.ChatsTable, bool]:
+        statement = postgresql.insert(tables.ChatsTable).values(
+            chat_type=tables.ChatType.DIRECT, created_by_id=created_by_id, direct_key=direct_key
         )
+        statement = statement.on_conflict_do_update(
+            index_elements=[tables.ChatsTable.direct_key],
+            set_={"direct_key": statement.excluded.direct_key},
+        )
+        # xmax is 0 only on a row version this statement inserted.
+        created: typing.Final = sa.literal_column("xmax = 0", sa.Boolean)
+        with wrap_sqlalchemy_exception(error_messages=DEFAULT_ERROR_MESSAGE_TEMPLATES, dialect_name="postgresql"):
+            result: typing.Final = await self.repository.session.execute(
+                statement.returning(tables.ChatsTable, created)
+            )
+        chat, was_created = result.one()
+        return chat, was_created
 
     async def list_for_user(self, user_id: int) -> Sequence[tables.ChatsTable]:
         unread_count: typing.Final = (

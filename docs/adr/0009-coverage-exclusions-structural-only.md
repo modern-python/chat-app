@@ -5,10 +5,9 @@ The suite runs at `--cov-fail-under=100`, and exemptions are structural only:
 all, each carrying an inline reason in `pyproject.toml` where the path does not
 explain itself, plus `exclude_also` for `if typing.TYPE_CHECKING:` blocks. No
 `# pragma: no cover` appears in `app/`, `tests/` or `migrations/`. "Awkward to
-reach" is not a warrant: where a branch looked untestable the answer was a
-repository subclass that raises the condition the database would raise, which is
-how the `DuplicateKeyError` recovery path in `CreateChatUseCase` and its
-defensive `is None` guard became executed code. Pragmas on unreachable-in-production guards were argued
+reach" is not a warrant: where a branch looks untestable, the answer is to
+produce the database condition for real, as the concurrent create tests do with
+a second connection holding an uncommitted insert. Pragmas on unreachable-in-production guards were argued
 for twice and refused, because an excluded branch is one nobody notices when it
 stops being unreachable, and the coverage number then asserts something untrue
 about what the tests exercise; tests written only to move the number were

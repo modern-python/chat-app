@@ -1,8 +1,8 @@
 import dataclasses
 import typing
 
-from advanced_alchemy.exceptions import DuplicateKeyError
 from db_retry import Transaction, postgres_retry
+from sqlalchemy import orm
 
 from app.actor import Actor
 from app.database import tables
@@ -32,40 +32,21 @@ class CreateChatUseCase:
     @postgres_retry
     async def __call__(self, *, actor: Actor, data: CreateChatRequest) -> tuple[tables.ChatsTable, bool]:
         member_ids: typing.Final = {actor.id, *data.member_ids}
-        direct_key: typing.Final = _direct_key(member_ids) if data.chat_type is tables.ChatType.DIRECT else None
-
-        chat: tables.ChatsTable | None = None
         async with self.transaction:
-            if direct_key is not None:
-                existing = await self.chats_repository.fetch_direct_by_key(direct_key)
-                if existing is not None:
-                    await self.transaction.commit()
-                    return existing, False
-
-            try:
-                chat = await self.chats_repository.create(
-                    tables.ChatsTable(
-                        chat_type=data.chat_type,
-                        title=data.title if data.chat_type is tables.ChatType.GROUP else None,
-                        created_by_id=actor.id,
-                        direct_key=direct_key,
-                    )
+            if data.chat_type is tables.ChatType.DIRECT:
+                chat, created = await self.chats_repository.get_or_create_direct(
+                    direct_key=_direct_key(member_ids), created_by_id=actor.id
                 )
-            except DuplicateKeyError:
-                # Group chats have no unique constraint here, so a collision is not recoverable.
-                if direct_key is None:
-                    raise
-                await self.transaction.rollback()
             else:
-                for user_id in sorted(member_ids):
-                    await self.chat_members_repository.create(tables.ChatMembersTable(chat_id=chat.id, user_id=user_id))
-                await self.transaction.commit()
-
-        if chat is None:
-            existing = await self.chats_repository.fetch_direct_by_key(direct_key)  # ty: ignore[invalid-argument-type]
-            if existing is None:
-                msg = "Direct chat creation raced but the resulting row could not be found"
-                raise RuntimeError(msg)
-            return existing, False
-
-        return await self.chats_repository.fetch_with_members(chat.id), True
+                chat = await self.chats_repository.create(
+                    tables.ChatsTable(chat_type=data.chat_type, title=data.title, created_by_id=actor.id)
+                )
+                created = True
+            members: typing.Final = (
+                await self.chat_members_repository.add_members(chat.id, member_ids)
+                if created
+                else await self.chat_members_repository.list_for_chat(chat.id)
+            )
+            orm.attributes.set_committed_value(chat, "members", list(members))
+            await self.transaction.commit()
+        return chat, created

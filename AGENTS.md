@@ -135,12 +135,10 @@ back. `app`/`client` fixtures build the real app and run it through
 container_fixture="request_container")` (`tests/use_cases/conftest.py`)
 exposes every repository/use case provider as a same-named pytest fixture —
 the template predates this and hand-assembles dependencies instead. The
-race-simulation pattern used to test the concurrent-retry path without a second
-real connection is the `_Racing*Repository` classes in
-`tests/use_cases/test_create_chat.py`. `tests/use_cases/test_create_message.py`
-uses a second real connection instead: it holds an uncommitted insert and polls
-`pg_stat_activity` until the use case waits on its lock. The invariant each one
-pins is in the docstring on the test that uses it.
+concurrent-create tests in `tests/use_cases/test_create_chat.py` and
+`tests/use_cases/test_create_message.py` use a second real connection: it holds
+an uncommitted insert, and the test polls `pg_stat_activity` until the use case
+waits on its lock. The invariant each one pins is in its docstring.
 
 **Migrations**: `migrations/env.py` reads the shared `METADATA` and rewrites
 the DSN driver from `postgresql+asyncpg` → `postgresql` (Alembic uses sync
