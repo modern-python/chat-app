@@ -6,7 +6,6 @@ from db_retry import Transaction, postgres_retry
 from app.actor import Actor
 from app.database import tables
 from app.exceptions import PermissionDeniedError
-from app.repositories.chat_members_repository import ChatMembersRepository
 from app.repositories.chats_repository import ChatsRepository
 
 
@@ -14,14 +13,13 @@ from app.repositories.chats_repository import ChatsRepository
 class FetchChatUseCase:
     transaction: Transaction
     chats_repository: ChatsRepository
-    chat_members_repository: ChatMembersRepository
 
     @postgres_retry
     async def __call__(self, *, actor: Actor, chat_id: int) -> tables.ChatsTable:
         async with self.transaction:
-            if not await self.chat_members_repository.is_member(chat_id, actor.id):
-                msg = "Not a member of this chat"
-                raise PermissionDeniedError(msg)
-            chat: typing.Final = await self.chats_repository.fetch_with_members(chat_id)
+            chat: typing.Final = await self.chats_repository.find_with_members(chat_id)
             await self.transaction.commit()
+        if chat is None or all(member.user_id != actor.id for member in chat.members):
+            msg = "Not a member of this chat"
+            raise PermissionDeniedError(msg)
         return chat

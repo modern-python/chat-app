@@ -6,7 +6,6 @@ from db_retry import Transaction, postgres_retry
 from app.actor import Actor
 from app.database import tables
 from app.exceptions import ConflictError
-from app.repositories.chat_members_repository import ChatMembersRepository
 from app.repositories.messages_repository import MessagesRepository
 from app.schemas.api import EditMessageRequest
 from app.use_cases.message_authorization import fetch_message_for_author
@@ -16,14 +15,12 @@ from app.use_cases.message_authorization import fetch_message_for_author
 class EditMessageUseCase:
     transaction: Transaction
     messages_repository: MessagesRepository
-    chat_members_repository: ChatMembersRepository
 
     @postgres_retry
     async def __call__(self, *, actor: Actor, message_id: int, data: EditMessageRequest) -> tables.MessagesTable:
         async with self.transaction:
             message = await fetch_message_for_author(
                 messages_repository=self.messages_repository,
-                chat_members_repository=self.chat_members_repository,
                 actor=actor,
                 message_id=message_id,
                 action="edit",
@@ -31,9 +28,7 @@ class EditMessageUseCase:
             if message.deleted_at is not None:
                 msg = "This message has been deleted"
                 raise ConflictError(msg)
-            message.text = data.text
-            message.edited_at = dt.datetime.now(tz=dt.UTC)
-            updated = await self.messages_repository.update(message, item_id=message_id)
+            updated = await self.messages_repository.edit_text(message_id, data.text, dt.datetime.now(tz=dt.UTC))
             await self.transaction.commit()
             # Safe inside the block: commit() ended the transaction, so __aexit__ only closes.
             return updated

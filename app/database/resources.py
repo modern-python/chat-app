@@ -1,6 +1,7 @@
 import asyncio
 import typing
 
+from sqlalchemy.engine.interfaces import IsolationLevel
 from sqlalchemy.ext import asyncio as sa
 
 from app.settings import settings
@@ -29,6 +30,10 @@ def create_session(engine: sa.AsyncEngine | sa.AsyncConnection) -> sa.AsyncSessi
         autoflush=False,
         join_transaction_mode="create_savepoint",
     )
+
+
+def autocommit_isolation_level() -> IsolationLevel | None:
+    return "AUTOCOMMIT"
 
 
 async def close_session(session: sa.AsyncSession) -> None:

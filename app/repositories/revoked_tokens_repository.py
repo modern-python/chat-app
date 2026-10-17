@@ -1,5 +1,6 @@
 import datetime as dt
 
+import sqlalchemy as sa
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 from sqlalchemy.dialects import postgresql
@@ -25,4 +26,6 @@ class RevokedTokensRepository(SQLAlchemyAsyncRepositoryService[tables.RevokedTok
         )
 
     async def prune_expired(self, now: dt.datetime) -> None:
-        await self.delete_where(tables.RevokedTokensTable.expires_at < now)
+        await self.repository.session.execute(
+            sa.delete(tables.RevokedTokensTable).where(tables.RevokedTokensTable.expires_at < now)
+        )

@@ -22,7 +22,8 @@ class RegisterUserUseCase:
                     username=data.username,
                     password_hash=security.hash_password(data.password),
                     display_name=data.display_name,
-                )
+                ),
+                auto_refresh=False,
             )
             await self.transaction.commit()
             return user

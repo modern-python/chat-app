@@ -1,9 +1,10 @@
+import datetime as dt
 import typing
 import uuid
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from advanced_alchemy.exceptions import wrap_sqlalchemy_exception
+from advanced_alchemy.exceptions import NotFoundError, wrap_sqlalchemy_exception
 from advanced_alchemy.filters import LimitOffset
 from advanced_alchemy.repository import DEFAULT_ERROR_MESSAGE_TEMPLATES, SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
@@ -37,18 +38,37 @@ class MessagesRepository(SQLAlchemyAsyncRepositoryService[tables.MessagesTable])
         message, was_created = result.one()
         return message, was_created
 
-    async def fetch_latest_active(self, chat_id: int) -> tables.MessagesTable | None:
-        """Return the newest non-deleted message in a chat, or None if none remains.
-
-        Used to repoint ChatsTable.last_message_id after a delete removes the current pointer.
-        """
-        messages = await self.get_many(
-            tables.MessagesTable.chat_id == chat_id,
-            tables.MessagesTable.deleted_at.is_(None),
-            LimitOffset(limit=1, offset=0),
-            order_by=[("id", True)],
+    async def fetch_with_membership(self, message_id: int, user_id: int) -> tuple[tables.MessagesTable, bool]:
+        is_member: typing.Final = (
+            sa.exists()
+            .where(
+                tables.ChatMembersTable.chat_id == tables.MessagesTable.chat_id,
+                tables.ChatMembersTable.user_id == user_id,
+            )
+            .label("is_member")
         )
-        return messages[0] if messages else None
+        result: typing.Final = await self.repository.session.execute(
+            sa.select(tables.MessagesTable, is_member).where(tables.MessagesTable.id == message_id)
+        )
+        row: typing.Final = result.one_or_none()
+        if row is None:
+            msg = "No item found when one was expected"
+            raise NotFoundError(msg)
+        return row[0], row[1]
+
+    async def edit_text(self, message_id: int, text: str, edited_at: dt.datetime) -> tables.MessagesTable:
+        result: typing.Final = await self.repository.session.execute(
+            sa.update(tables.MessagesTable)
+            .where(tables.MessagesTable.id == message_id)
+            .values(text=text, edited_at=edited_at)
+            .returning(tables.MessagesTable)
+        )
+        return result.scalar_one()
+
+    async def soft_delete(self, message_id: int, deleted_at: dt.datetime) -> None:
+        await self.repository.session.execute(
+            sa.update(tables.MessagesTable).where(tables.MessagesTable.id == message_id).values(deleted_at=deleted_at)
+        )
 
     async def list_page(
         self,

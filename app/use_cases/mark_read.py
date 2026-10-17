@@ -7,7 +7,6 @@ from app.actor import Actor
 from app.database import tables
 from app.exceptions import PermissionDeniedError, ValidationError
 from app.repositories.chat_members_repository import ChatMembersRepository
-from app.repositories.messages_repository import MessagesRepository
 from app.schemas.api import MarkReadRequest
 
 
@@ -15,20 +14,19 @@ from app.schemas.api import MarkReadRequest
 class MarkReadUseCase:
     transaction: Transaction
     chat_members_repository: ChatMembersRepository
-    messages_repository: MessagesRepository
 
     @postgres_retry
     async def __call__(self, *, actor: Actor, chat_id: int, data: MarkReadRequest) -> tables.ChatMembersTable:
         async with self.transaction:
-            member: typing.Final = await self.chat_members_repository.fetch_member(chat_id, actor.id)
-            if member is None:
+            found: typing.Final = await self.chat_members_repository.fetch_member_and_message_exists(
+                chat_id, actor.id, data.last_read_message_id
+            )
+            if found is None:
                 msg = "Not a member of this chat"
                 raise PermissionDeniedError(msg)
 
-            target_message = await self.messages_repository.get_one_or_none(
-                id=data.last_read_message_id, chat_id=chat_id
-            )
-            if target_message is None:
+            member, message_exists = found
+            if not message_exists:
                 msg = "last_read_message_id does not name a message in this chat"
                 raise ValidationError(msg)
 
