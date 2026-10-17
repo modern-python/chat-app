@@ -1,59 +1,26 @@
+import asyncio
+import re
+import typing
 import uuid
 
 import pytest
-from advanced_alchemy.exceptions import DuplicateKeyError
+import sqlalchemy as sa
+from db_retry import Transaction
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
+from app import security
 from app.actor import Actor
 from app.database import tables
+from app.database.resources import create_database_engine, create_session
 from app.exceptions import PermissionDeniedError
+from app.repositories.chat_members_repository import ChatMembersRepository
 from app.repositories.chats_repository import ChatsRepository
 from app.repositories.messages_repository import MessagesRepository
 from app.schemas import api as schemas
 from app.use_cases.create_chat import CreateChatUseCase
 from app.use_cases.create_message import CreateMessageUseCase
-
-
-class _RacingMessagesRepository(MessagesRepository):
-    """Simulate losing a concurrent-send-with-the-same-key race.
-
-    The pre-check misses (as if the winner's row weren't committed/visible yet), the insert
-    then collides with the winner's now-committed row (DuplicateKeyError), and the recovery
-    re-read must find it.
-    """
-
-    _missed_precheck: bool = False
-
-    async def fetch_by_idempotency_key(self, chat_id: int, idempotency_key: uuid.UUID) -> tables.MessagesTable | None:
-        if not self._missed_precheck:
-            self._missed_precheck = True
-            return None
-        return await super().fetch_by_idempotency_key(chat_id, idempotency_key)
-
-    async def create(self, *_args: object, **_kwargs: object) -> tables.MessagesTable:
-        msg = "simulated race: another request already sent this message"
-        raise DuplicateKeyError(msg)
-
-
-class _NeverFoundMessagesRepository(MessagesRepository):
-    """Simulates a race whose recovery re-read can never find the winner's row.
-
-    Both `fetch_by_idempotency_key` calls (the pre-check and the post-rollback recovery
-    re-read) return `None`, and `create()` always raises `DuplicateKeyError` - a state the
-    unique constraint on `(chat_id, idempotency_key)` should make unreachable in production,
-    exercised here only to prove `CreateMessageUseCase` raises `RuntimeError` rather than
-    returning `None` silently.
-    """
-
-    async def fetch_by_idempotency_key(
-        self,
-        chat_id: int,  # noqa: ARG002
-        idempotency_key: uuid.UUID,  # noqa: ARG002
-    ) -> tables.MessagesTable | None:
-        return None
-
-    async def create(self, *_args: object, **_kwargs: object) -> tables.MessagesTable:
-        msg = "simulated race: another request already sent this message"
-        raise DuplicateKeyError(msg)
+from tests.api.helpers import count_statements
+from tests.factories import UserFactory
 
 
 async def test_send_returns_created_true_on_first_call(
@@ -106,57 +73,6 @@ async def test_non_member_cannot_send(
         )
 
 
-async def test_concurrent_duplicate_key_recovers_the_winners_message(
-    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: Actor
-) -> None:
-    """INVARIANT: a message insert losing the (chat_id, idempotency_key) race returns the winner's row.
-
-    Broken by dropping the explicit `await self.transaction.rollback()` before the
-    recovery read, or by widening the caught exception beyond DuplicateKeyError so
-    an unrelated integrity error is silently funnelled into recovery.
-    """
-    key = uuid.uuid4()
-    winner, winner_created = await create_message_use_case(
-        actor=alice, chat_id=direct_chat.id, data=schemas.SendMessageRequest(idempotency_key=key, text="hi")
-    )
-    assert winner_created is True
-    winner_id = winner.id
-
-    racer = CreateMessageUseCase(
-        transaction=create_message_use_case.transaction,
-        chats_repository=create_message_use_case.chats_repository,
-        chat_members_repository=create_message_use_case.chat_members_repository,
-        messages_repository=_RacingMessagesRepository(
-            session=create_message_use_case.messages_repository.repository.session, auto_commit=False
-        ),
-    )
-    loser, loser_created = await racer(
-        actor=alice, chat_id=direct_chat.id, data=schemas.SendMessageRequest(idempotency_key=key, text="hi again")
-    )
-    assert loser_created is False
-    assert loser.id == winner_id
-    assert loser.text == "hi"
-
-
-async def test_send_recovery_raises_if_the_winners_row_is_unreadable(
-    create_message_use_case: CreateMessageUseCase, direct_chat: tables.ChatsTable, alice: Actor
-) -> None:
-    broken = CreateMessageUseCase(
-        transaction=create_message_use_case.transaction,
-        chats_repository=create_message_use_case.chats_repository,
-        chat_members_repository=create_message_use_case.chat_members_repository,
-        messages_repository=_NeverFoundMessagesRepository(
-            session=create_message_use_case.messages_repository.repository.session, auto_commit=False
-        ),
-    )
-    with pytest.raises(RuntimeError, match="could not be found"):
-        await broken(
-            actor=alice,
-            chat_id=direct_chat.id,
-            data=schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hi"),
-        )
-
-
 async def test_same_idempotency_key_in_two_different_chats_creates_two_messages(
     create_message_use_case: CreateMessageUseCase,
     create_chat_use_case: CreateChatUseCase,
@@ -181,3 +97,97 @@ async def test_same_idempotency_key_in_two_different_chats_creates_two_messages(
     assert first.id != second.id
     assert first.chat_id == direct_chat.id
     assert second.chat_id == other_chat.id
+
+
+async def test_send_writes_the_message_with_a_single_statement(
+    create_message_use_case: CreateMessageUseCase,
+    direct_chat: tables.ChatsTable,
+    alice: Actor,
+    db_session: AsyncSession,
+) -> None:
+    with count_statements(db_session) as statements:
+        await create_message_use_case(
+            actor=alice,
+            chat_id=direct_chat.id,
+            data=schemas.SendMessageRequest(idempotency_key=uuid.uuid4(), text="hi"),
+        )
+
+    message_statements: typing.Final = [statement for statement in statements if re.search(r"\bmessages\b", statement)]
+    assert len(message_statements) == 1, message_statements
+    assert "ON CONFLICT" in message_statements[0]
+
+
+async def _wait_until_blocked_on_a_lock(engine: AsyncEngine, pid: int) -> None:
+    wait_event_type = None
+    while wait_event_type != "Lock":
+        await asyncio.sleep(0.01)
+        async with engine.connect() as connection:
+            wait_event_type = await connection.scalar(
+                sa.text("SELECT wait_event_type FROM pg_stat_activity WHERE pid = :pid"), {"pid": pid}
+            )
+
+
+async def test_send_returns_the_message_a_concurrent_request_created_with_the_same_key() -> None:
+    """INVARIANT: a send racing an uncommitted insert of the same key waits for it and returns that row.
+
+    It reports created=False and leaves last_message_id alone. Broken by switching to ON CONFLICT
+    DO NOTHING, whose RETURNING yields no row for the request that loses the race.
+    """
+    engine: typing.Final = create_database_engine()
+    idempotency_key: typing.Final = uuid.uuid4()
+    setup_session: typing.Final = create_session(engine)
+    user: typing.Final = UserFactory.build(
+        username=f"racer-{idempotency_key}",
+        password_hash=security.hash_password("hunter2hunter2"),
+        display_name="Racer",
+    )
+    setup_session.add(user)
+    await setup_session.flush()
+    chat: typing.Final = tables.ChatsTable(chat_type=tables.ChatType.GROUP, title="race", created_by_id=user.id)
+    setup_session.add(chat)
+    await setup_session.flush()
+    setup_session.add(tables.ChatMembersTable(chat_id=chat.id, user_id=user.id))
+    await setup_session.commit()
+    await setup_session.close()
+    try:
+        async with engine.connect() as concurrent_request:
+            await concurrent_request.execute(
+                sa.insert(tables.MessagesTable).values(
+                    chat_id=chat.id, user_id=user.id, idempotency_key=idempotency_key, text="first"
+                )
+            )
+            session: typing.Final = create_session(engine)
+            pid: typing.Final = await (await session.connection()).scalar(sa.text("SELECT pg_backend_pid()"))
+            use_case: typing.Final = CreateMessageUseCase(
+                transaction=Transaction(session=session),
+                chats_repository=ChatsRepository(session=session, auto_commit=False),
+                chat_members_repository=ChatMembersRepository(session=session, auto_commit=False),
+                messages_repository=MessagesRepository(session=session, auto_commit=False),
+            )
+            pending: typing.Final = asyncio.create_task(
+                use_case(
+                    actor=Actor(id=user.id),
+                    chat_id=chat.id,
+                    data=schemas.SendMessageRequest(idempotency_key=idempotency_key, text="second"),
+                )
+            )
+            await asyncio.wait_for(_wait_until_blocked_on_a_lock(engine, pid), timeout=5)
+            await concurrent_request.commit()
+            message, created = await pending
+            await session.close()
+        async with engine.connect() as connection:
+            last_message_id: typing.Final = await connection.scalar(
+                sa.select(tables.ChatsTable.last_message_id).where(tables.ChatsTable.id == chat.id)
+            )
+        assert message.text == "first"
+        assert created is False
+        assert last_message_id is None
+    finally:
+        async with engine.begin() as connection:
+            await connection.execute(sa.delete(tables.MessagesTable).where(tables.MessagesTable.chat_id == chat.id))
+            await connection.execute(
+                sa.delete(tables.ChatMembersTable).where(tables.ChatMembersTable.chat_id == chat.id)
+            )
+            await connection.execute(sa.delete(tables.ChatsTable).where(tables.ChatsTable.id == chat.id))
+            await connection.execute(sa.delete(tables.UsersTable).where(tables.UsersTable.id == user.id))
+        await engine.dispose()
