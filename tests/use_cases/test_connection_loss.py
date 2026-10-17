@@ -145,7 +145,7 @@ async def test_membership_gated_use_case_recovers_from_a_connection_lost_while_p
 
 
 @pytest.mark.usefixtures("lost_pooled_connection")
-async def test_direct_chat_lookup_recovers_from_a_connection_lost_while_pooled(
+async def test_direct_chat_upsert_recovers_from_a_connection_lost_while_pooled(
     request_container: modern_di.Container,
 ) -> None:
     use_case: typing.Final = request_container.resolve_provider(ioc.UseCases.create_chat_use_case)

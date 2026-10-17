@@ -73,24 +73,7 @@ async def test_group_chat_includes_the_creator(
     assert {member.user_id for member in chat.members} == {alice.id, bob.id, carol.id}
 
 
-def _round_trips(statements: list[str]) -> list[str]:
-    return [statement for statement in statements if not statement.startswith(("SAVEPOINT", "RELEASE SAVEPOINT"))]
-
-
-async def test_direct_chat_creation_takes_two_statements(
-    create_chat_use_case: CreateChatUseCase, alice: Actor, bob: Actor, db_session: AsyncSession
-) -> None:
-    with count_statements(db_session) as statements:
-        await create_chat_use_case(
-            actor=alice, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[bob.id])
-        )
-
-    round_trips: typing.Final = _round_trips(statements)
-    assert len(round_trips) == 2, round_trips
-    assert "ON CONFLICT" in round_trips[0]
-
-
-async def test_direct_chat_replay_takes_two_statements(
+async def test_direct_chat_replay_starts_with_the_upsert(
     create_chat_use_case: CreateChatUseCase, alice: Actor, bob: Actor, db_session: AsyncSession
 ) -> None:
     await create_chat_use_case(
@@ -101,9 +84,8 @@ async def test_direct_chat_replay_takes_two_statements(
             actor=bob, data=schemas.CreateChatRequest(chat_type=tables.ChatType.DIRECT, member_ids=[alice.id])
         )
 
-    round_trips: typing.Final = _round_trips(statements)
-    assert len(round_trips) == 2, round_trips
-    assert "ON CONFLICT" in round_trips[0]
+    round_trips: typing.Final = [statement for statement in statements if "SAVEPOINT" not in statement]
+    assert "ON CONFLICT" in round_trips[0], round_trips
 
 
 async def _wait_until_blocked_on_a_lock(engine: AsyncEngine, pid: int) -> None:

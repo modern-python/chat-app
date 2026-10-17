@@ -21,6 +21,8 @@ class ChatsRepository(SQLAlchemyAsyncRepositoryService[tables.ChatsTable]):
         return await self.get_one(
             tables.ChatsTable.id == chat_id,
             load=[orm.selectinload(tables.ChatsTable.members)],
+            # A chat already in the identity map keeps its noload members without this.
+            execution_options={"populate_existing": True},
         )
 
     async def get_or_create_direct(self, *, direct_key: str, created_by_id: int) -> tuple[tables.ChatsTable, bool]:

@@ -2,7 +2,6 @@ import dataclasses
 import typing
 
 from db_retry import Transaction, postgres_retry
-from sqlalchemy import orm
 
 from app.actor import Actor
 from app.database import tables
@@ -42,11 +41,9 @@ class CreateChatUseCase:
                     tables.ChatsTable(chat_type=data.chat_type, title=data.title, created_by_id=actor.id)
                 )
                 created = True
-            members: typing.Final = (
-                await self.chat_members_repository.add_members(chat.id, member_ids)
-                if created
-                else await self.chat_members_repository.list_for_chat(chat.id)
-            )
-            orm.attributes.set_committed_value(chat, "members", list(members))
+            if created:
+                for user_id in sorted(member_ids):
+                    await self.chat_members_repository.create(tables.ChatMembersTable(chat_id=chat.id, user_id=user_id))
+            chat_with_members: typing.Final = await self.chats_repository.fetch_with_members(chat.id)
             await self.transaction.commit()
-        return chat, created
+        return chat_with_members, created
