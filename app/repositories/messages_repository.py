@@ -3,8 +3,9 @@ import uuid
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+from advanced_alchemy.exceptions import wrap_sqlalchemy_exception
 from advanced_alchemy.filters import LimitOffset
-from advanced_alchemy.repository import SQLAlchemyAsyncRepository
+from advanced_alchemy.repository import DEFAULT_ERROR_MESSAGE_TEMPLATES, SQLAlchemyAsyncRepository
 from advanced_alchemy.service import SQLAlchemyAsyncRepositoryService
 from sqlalchemy.dialects import postgresql
 
@@ -29,9 +30,11 @@ class MessagesRepository(SQLAlchemyAsyncRepositoryService[tables.MessagesTable])
         )
         # xmax is 0 only on a row version this statement inserted.
         created: typing.Final = sa.literal_column("xmax = 0", sa.Boolean)
-        message, was_created = (
-            await self.repository.session.execute(statement.returning(tables.MessagesTable, created))
-        ).one()
+        with wrap_sqlalchemy_exception(error_messages=DEFAULT_ERROR_MESSAGE_TEMPLATES, dialect_name="postgresql"):
+            result: typing.Final = await self.repository.session.execute(
+                statement.returning(tables.MessagesTable, created)
+            )
+        message, was_created = result.one()
         return message, was_created
 
     async def fetch_latest_active(self, chat_id: int) -> tables.MessagesTable | None:
