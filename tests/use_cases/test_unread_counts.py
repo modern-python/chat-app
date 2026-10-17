@@ -47,6 +47,10 @@ async def test_system_messages_count_as_unread(
     direct_chat: tables.ChatsTable,
     alice: Actor,
 ) -> None:
+    """INVARIANT: system messages (user_id IS NULL) count as unread.
+
+    Broken by comparing user_id with != instead of IS DISTINCT FROM, since NULL != 1 is NULL.
+    """
     await messages_repository.create(
         tables.MessagesTable(chat_id=direct_chat.id, user_id=None, idempotency_key=uuid.uuid4(), text="Bob joined")
     )
@@ -175,6 +179,7 @@ async def test_marking_read_is_monotonic(
     bob: Actor,
     send: SendFixture,
 ) -> None:
+    """INVARIANT: marking read with a lower id leaves the marker where it is and raises nothing."""
     first, _ = await send(bob, direct_chat.id, "one")
     second, _ = await send(bob, direct_chat.id, "two")
     await mark_read_use_case(

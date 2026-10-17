@@ -8,7 +8,7 @@ that user, and short-lived tokens with refresh because they replace the whole
 auth model. The cost is one primary-key lookup per authenticated request, on a
 session the middleware closes before the handler opens its own, so a request
 still holds one pooled connection at a time. That lookup is the read
-[ADR-0010](0010-auth-carries-an-actor-id.md) kept out of authentication; the
+[ADR-0008](0008-auth-carries-an-actor-id.md) kept out of authentication; the
 user row is still never loaded. A token without a `jti`, which includes every
 token issued before this change, gets a 401. Each logout prunes expired rows,
 so the table holds at most a token lifetime of logouts.

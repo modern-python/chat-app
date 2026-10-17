@@ -2,7 +2,7 @@
 
 One file per decision taken, especially the options **rejected**, so reviews do
 not re-litigate them. The directory listing is the index: there is no generated
-listing and no `summary` frontmatter. Nothing validates the set mechanically;
+listing and no frontmatter. Nothing validates the set mechanically;
 the standard below is held up by review.
 
 ## Numbering
@@ -14,20 +14,13 @@ sequence stays contiguous, and every citation moves in the same change:
 `tests/test_adr_citations.py` fails on a `docs/adr/` path that no longer
 resolves.
 
-## Status lives in the frontmatter, or nowhere
+## Every record is current
 
-An ADR with no frontmatter is **accepted**. A decision that is re-argued and
-replaced is superseded, not deleted, so the earlier reasoning stays readable. A
-record that no longer passes the admission test below is deleted outright; git
-history keeps it.
-
-When a later ADR supersedes an earlier one, add to the earlier file:
-
-```yaml
----
-superseded_by: 0010-its-slug
----
-```
+Every file here is an accepted decision, so ADRs carry no status frontmatter.
+When a later decision replaces an earlier one, the reasoning that still holds,
+usually why the rejected options fail, moves into the new record and the old
+file is deleted. A record that no longer passes the admission test below is
+deleted too. Git history keeps both.
 
 ## The admission test
 

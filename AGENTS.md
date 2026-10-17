@@ -187,6 +187,12 @@ env vars (see `docker-compose.yml`). `api_bootstrapper_config` builds the
   `ForeignKey`, a `return` from inside a transaction block, discarded work that
   is not dead code (`AuthenticateUserUseCase`'s hash-anyway). Alembic's own
   `# ###` autogenerate markers stay — they are regenerated on every migration.
+- **Coverage.** The suite runs at `--cov-fail-under=100` and no `# pragma: no cover`
+  appears anywhere. The only exemptions are structural: `[tool.coverage.run] omit`
+  for files the default run never imports, and `exclude_also` for
+  `if typing.TYPE_CHECKING:`. A branch that looks untestable gets a test that
+  produces its condition for real, such as the concurrent create tests'
+  second connection holding an uncommitted insert.
 - `ruff` is configured with `select = ["ALL"]` and a line length of 120 —
   expect strict lint. Type-check with `ty`.
 
