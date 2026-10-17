@@ -71,32 +71,19 @@ async def lost_pooled_connection(request_container: modern_di.Container) -> None
     await _terminate_backend(engine, *watched)
 
 
-_READ_CASES: typing.Final = [
-    (ioc.UseCases.authenticate_user_use_case, {"username": "nobody", "password": "hunter2hunter2"}, None),
-    (ioc.UseCases.fetch_chats_use_case, {"actor": UNKNOWN_ACTOR}, []),
-    (ioc.UseCases.fetch_user_use_case, {"actor": UNKNOWN_ACTOR}, None),
-]
-READ_USE_CASES: typing.Final = pytest.mark.parametrize(("provider", "kwargs", "expected"), _READ_CASES)
-READ_USE_CASES_WITH_REVOCATION_CHECK: typing.Final = pytest.mark.parametrize(
+AUTOCOMMIT_READ_USE_CASES: typing.Final = pytest.mark.parametrize(
     ("provider", "kwargs", "expected"),
-    [*_READ_CASES, (ioc.UseCases.check_token_revoked_use_case, {"jti": "unknown"}, False)],
+    [
+        (ioc.UseCases.authenticate_user_use_case, {"username": "nobody", "password": "hunter2hunter2"}, None),
+        (ioc.UseCases.fetch_chats_use_case, {"actor": UNKNOWN_ACTOR}, []),
+        (ioc.UseCases.fetch_user_use_case, {"actor": UNKNOWN_ACTOR}, None),
+        (ioc.UseCases.check_token_revoked_use_case, {"jti": "unknown"}, False),
+    ],
 )
 
 
-@pytest.mark.usefixtures("lost_connection")
-@READ_USE_CASES
-async def test_read_use_case_recovers_from_a_lost_connection(
-    request_container: modern_di.Container,
-    provider: modern_di.providers.Factory[typing.Any],
-    kwargs: dict[str, typing.Any],
-    expected: object,
-) -> None:
-    use_case: typing.Final = request_container.resolve_provider(provider)
-    assert await use_case(**kwargs) == expected
-
-
 @pytest.mark.usefixtures("lost_pooled_connection")
-@READ_USE_CASES_WITH_REVOCATION_CHECK
+@AUTOCOMMIT_READ_USE_CASES
 async def test_read_use_case_recovers_from_a_connection_lost_while_pooled(
     request_container: modern_di.Container,
     provider: modern_di.providers.Factory[typing.Any],
@@ -107,22 +94,24 @@ async def test_read_use_case_recovers_from_a_connection_lost_while_pooled(
     assert await use_case(**kwargs) == expected
 
 
+_TRANSACTIONAL_MEMBERSHIP_GATED_CASES: typing.Final = [
+    (ioc.UseCases.fetch_messages_use_case, {}),
+    (
+        ioc.UseCases.create_message_use_case,
+        {"data": SendMessageRequest(idempotency_key=uuid.uuid4(), text="hello")},
+    ),
+    (ioc.UseCases.mark_read_use_case, {"data": MarkReadRequest(last_read_message_id=1)}),
+]
+TRANSACTIONAL_MEMBERSHIP_GATED_USE_CASES: typing.Final = pytest.mark.parametrize(
+    ("provider", "kwargs"), _TRANSACTIONAL_MEMBERSHIP_GATED_CASES
+)
 MEMBERSHIP_GATED_USE_CASES: typing.Final = pytest.mark.parametrize(
-    ("provider", "kwargs"),
-    [
-        (ioc.UseCases.fetch_chat_use_case, {}),
-        (ioc.UseCases.fetch_messages_use_case, {}),
-        (
-            ioc.UseCases.create_message_use_case,
-            {"data": SendMessageRequest(idempotency_key=uuid.uuid4(), text="hello")},
-        ),
-        (ioc.UseCases.mark_read_use_case, {"data": MarkReadRequest(last_read_message_id=1)}),
-    ],
+    ("provider", "kwargs"), [(ioc.UseCases.fetch_chat_use_case, {}), *_TRANSACTIONAL_MEMBERSHIP_GATED_CASES]
 )
 
 
 @pytest.mark.usefixtures("lost_connection")
-@MEMBERSHIP_GATED_USE_CASES
+@TRANSACTIONAL_MEMBERSHIP_GATED_USE_CASES
 async def test_membership_gated_use_case_recovers_from_a_lost_connection(
     request_container: modern_di.Container,
     provider: modern_di.providers.Factory[typing.Any],
