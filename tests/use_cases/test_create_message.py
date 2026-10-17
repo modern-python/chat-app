@@ -5,6 +5,7 @@ import uuid
 
 import pytest
 import sqlalchemy as sa
+from advanced_alchemy.exceptions import ForeignKeyError
 from db_retry import Transaction
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
@@ -97,6 +98,13 @@ async def test_same_idempotency_key_in_two_different_chats_creates_two_messages(
     assert first.id != second.id
     assert first.chat_id == direct_chat.id
     assert second.chat_id == other_chat.id
+
+
+async def test_get_or_create_raises_foreign_key_error_for_an_unknown_chat(
+    messages_repository: MessagesRepository, alice: Actor
+) -> None:
+    with pytest.raises(ForeignKeyError):
+        await messages_repository.get_or_create(chat_id=-1, user_id=alice.id, idempotency_key=uuid.uuid4(), text="hi")
 
 
 async def test_send_writes_the_message_with_a_single_statement(
