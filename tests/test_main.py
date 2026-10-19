@@ -1,3 +1,5 @@
+import typing
+
 import modern_di
 import sqlalchemy as sa
 from advanced_alchemy.exceptions import NotFoundError
@@ -10,7 +12,7 @@ from app.api import exception_handlers
 from app.database.resources import close_database_engine, create_database_engine
 from app.database.tables import UsersTable
 from app.exceptions import PermissionDeniedError
-from app.settings import settings
+from app.settings import Settings, settings
 from tests.conftest import rolled_back_db_session
 from tests.factories import UserFactory
 
@@ -43,8 +45,19 @@ async def test_permission_denied_handler_defaults_message_when_empty() -> None:
     assert response.content == {"detail": "Permission denied"}
 
 
+async def test_database_engine_uses_overridden_settings() -> None:
+    container: typing.Final = modern_di.Container(groups=ioc.ALL_GROUPS)
+    container.override(ioc.Config.settings, Settings(db_pool_size=2))
+    try:
+        pool: typing.Final = container.resolve_provider(ioc.Database.database_engine).pool
+        assert isinstance(pool, QueuePool)
+        assert pool.size() == 2
+    finally:
+        await container.close_async()
+
+
 async def test_create_database_engine_reads_settings_and_can_be_disposed() -> None:
-    engine = create_database_engine()
+    engine = create_database_engine(settings)
     try:
         assert isinstance(engine.pool, QueuePool)
         assert engine.pool.size() == settings.db_pool_size
@@ -64,7 +77,7 @@ async def test_db_session_teardown_rolls_back_committed_writes(di_container: mod
         await session.commit()
         assert (await session.scalars(sa.select(UsersTable).where(UsersTable.id == user.id))).one() is user
 
-    engine = create_database_engine()
+    engine = create_database_engine(settings)
     try:
         async with engine.connect() as connection:
             result = await connection.scalars(sa.select(UsersTable.id).where(UsersTable.id == user.id))

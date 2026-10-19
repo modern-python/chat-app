@@ -2,11 +2,12 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.resources import create_database_engine
+from app.settings import settings
 from tests.api.helpers import count_statements as _count_statements
 
 
 async def test_count_statements_ignores_other_connections(db_session: AsyncSession) -> None:
-    engine = create_database_engine()
+    engine = create_database_engine(settings)
     try:
         with _count_statements(db_session) as statements:
             async with engine.connect() as other_connection:

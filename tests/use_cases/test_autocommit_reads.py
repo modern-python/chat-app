@@ -10,6 +10,7 @@ from app import ioc
 from app.actor import Actor
 from app.database.resources import create_database_engine
 from app.exceptions import PermissionDeniedError
+from app.settings import settings
 
 
 UNKNOWN_ACTOR: typing.Final = Actor(id=-1)
@@ -30,7 +31,7 @@ async def test_single_statement_read_sends_no_begin_or_commit(
     provider: modern_di.providers.Factory[typing.Any],
     kwargs: dict[str, typing.Any],
 ) -> None:
-    engine: typing.Final = create_database_engine()
+    engine: typing.Final = create_database_engine(settings)
     in_transaction: typing.Final[list[bool]] = []
 
     def record(connection: sa.Connection, *_: object) -> None:
