@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import ioc
 from app.api.app import build_app
 from app.database.resources import create_database_engine, create_session
+from app.settings import settings
 
 
 @pytest.fixture
@@ -42,7 +43,7 @@ async def di_container(app: litestar.Litestar) -> typing.AsyncIterator[modern_di
 
 @contextlib.asynccontextmanager
 async def rolled_back_db_session(di_container: modern_di.Container) -> collections.abc.AsyncGenerator[AsyncSession]:
-    engine = create_database_engine()
+    engine = create_database_engine(settings)
     connection = await engine.connect()
     transaction = await connection.begin()
     di_container.override(ioc.Database.database_engine, connection)

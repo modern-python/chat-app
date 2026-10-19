@@ -14,6 +14,7 @@ from app.exceptions import ValidationError
 from app.repositories.chat_members_repository import ChatMembersRepository
 from app.repositories.chats_repository import ChatsRepository
 from app.schemas import api as schemas
+from app.settings import settings
 from app.use_cases.create_chat import CreateChatUseCase
 from tests.api.helpers import count_statements
 from tests.factories import UserFactory
@@ -104,7 +105,7 @@ async def test_direct_chat_returns_the_chat_a_concurrent_request_created_for_the
     It reports created=False and inserts no members of its own. Broken by switching to ON CONFLICT
     DO NOTHING, whose RETURNING yields no row for the request that loses the race.
     """
-    engine: typing.Final = create_database_engine()
+    engine: typing.Final = create_database_engine(settings)
     setup_session: typing.Final = create_session(engine)
     users: typing.Final = [
         UserFactory.build(

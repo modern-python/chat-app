@@ -18,6 +18,7 @@ from app.repositories.chat_members_repository import ChatMembersRepository
 from app.repositories.chats_repository import ChatsRepository
 from app.repositories.messages_repository import MessagesRepository
 from app.schemas import api as schemas
+from app.settings import settings
 from app.use_cases.create_chat import CreateChatUseCase
 from app.use_cases.create_message import CreateMessageUseCase
 from tests.api.helpers import count_statements
@@ -141,7 +142,7 @@ async def test_send_returns_the_message_a_concurrent_request_created_with_the_sa
     It reports created=False and leaves last_message_id alone. Broken by switching to ON CONFLICT
     DO NOTHING, whose RETURNING yields no row for the request that loses the race.
     """
-    engine: typing.Final = create_database_engine()
+    engine: typing.Final = create_database_engine(settings)
     idempotency_key: typing.Final = uuid.uuid4()
     setup_session: typing.Final = create_session(engine)
     user: typing.Final = UserFactory.build(

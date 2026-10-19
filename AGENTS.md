@@ -96,16 +96,17 @@ which raises at startup if a non-local environment is still running the
 default JWT secret.
 
 **Dependency injection** (`app/ioc.py`): one `modern_di.Container` built from
-`ALL_GROUPS = [Database, Repositories, UseCases]`, attached via
+`ALL_GROUPS = [Config, Database, Repositories, UseCases]`, attached via
 `modern_di_litestar.ModernDIPlugin`. Route handlers receive use cases as
 parameters typed `NamedDependency[SomeUseCase]`; nothing wires them by hand.
 `build_app` passes `autowired_groups=[ioc.UseCases]` to the plugin, which
 registers one Litestar dependency per provider on that group, named after the
-provider attribute (`create_chat_use_case`, ...). `Database` and `Repositories`
-are deliberately **not** autowired: a route handler has no business resolving
-a session, a transaction or a repository directly. Provider scopes:
-- `Database.database_engine`: app-scoped factory, `cache=` finalizer disposes
-  the engine.
+provider attribute (`create_chat_use_case`, ...). `Config`, `Database` and
+`Repositories` are deliberately **not** autowired: a route handler has no
+business resolving settings, a session, a transaction or a repository directly. Provider scopes:
+- `Config.settings`: app-scoped cached `Settings`.
+- `Database.database_engine`: app-scoped factory that takes `Config.settings`
+  by type, `cache=` finalizer disposes the engine.
 - `Database.database_session`: request-scoped, finalizer closes the session.
 - `Database.transaction`: request-scoped `db_retry.Transaction`, the object
   every use case wraps its work in.
@@ -156,6 +157,11 @@ enforces this.
 env vars (see `docker-compose.yml`). `api_bootstrapper_config` builds the
 `LitestarConfig` consumed by `lite-bootstrap`. `jwt_cookie_secure` defaults
 `False` for local `http://` development and must be `True` behind HTTPS.
+The engine gets settings from `ioc.Config.settings`, so a test can change its
+config with `container.override(ioc.Config.settings, Settings(...))` before the
+engine is first built. `app/api/__main__.py`, `migrations/env.py`, `build_app`
+and `app/api/auth.py` read the module-level `settings` instead, because they run
+outside the container or before it exists.
 
 ## Conventions
 

@@ -9,6 +9,7 @@ from app.repositories.chats_repository import ChatsRepository
 from app.repositories.messages_repository import MessagesRepository
 from app.repositories.revoked_tokens_repository import RevokedTokensRepository
 from app.repositories.users_repository import UsersRepository
+from app.settings import Settings
 from app.use_cases.authenticate_user import AuthenticateUserUseCase
 from app.use_cases.check_token_revoked import CheckTokenRevokedUseCase
 from app.use_cases.create_chat import CreateChatUseCase
@@ -22,6 +23,10 @@ from app.use_cases.fetch_user import FetchUserUseCase
 from app.use_cases.mark_read import MarkReadUseCase
 from app.use_cases.register_user import RegisterUserUseCase
 from app.use_cases.revoke_token import RevokeTokenUseCase
+
+
+class Config(Group):
+    settings = providers.Factory(creator=Settings, cache=True)
 
 
 class Database(Group):
@@ -99,4 +104,4 @@ class UseCases(Group, scope=Scope.REQUEST):
     )
 
 
-ALL_GROUPS: typing.Final[list[type[Group]]] = [Database, Repositories, UseCases]
+ALL_GROUPS: typing.Final[list[type[Group]]] = [Config, Database, Repositories, UseCases]

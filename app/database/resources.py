@@ -4,10 +4,10 @@ import typing
 from sqlalchemy.engine.interfaces import IsolationLevel
 from sqlalchemy.ext import asyncio as sa
 
-from app.settings import settings
+from app.settings import Settings
 
 
-def create_database_engine() -> sa.AsyncEngine:
+def create_database_engine(settings: Settings) -> sa.AsyncEngine:
     return sa.create_async_engine(
         url=settings.db_dsn_parsed,
         echo=settings.service_debug,

@@ -15,6 +15,7 @@ from app.database import tables
 from app.database.resources import create_database_engine
 from app.exceptions import PermissionDeniedError
 from app.schemas.api import CreateChatRequest, MarkReadRequest, SendMessageRequest
+from app.settings import settings
 
 
 UNKNOWN_ACTOR: typing.Final = Actor(id=-1)
@@ -22,7 +23,7 @@ UNKNOWN_ACTOR: typing.Final = Actor(id=-1)
 
 @pytest.fixture
 async def request_container(di_container: modern_di.Container) -> typing.AsyncIterator[modern_di.Container]:
-    engine: typing.Final = create_database_engine()
+    engine: typing.Final = create_database_engine(settings)
     di_container.override(ioc.Database.database_engine, engine)
     try:
         async with di_container.build_child_container(scope=modern_di.Scope.REQUEST) as container:
