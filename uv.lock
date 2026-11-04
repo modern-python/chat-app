@@ -299,7 +299,7 @@ requires-dist = [
     { name = "alembic-postgresql-enum" },
     { name = "argon2-cffi" },
     { name = "asyncpg" },
-    { name = "db-retry", specifier = ">=0.8.1" },
+    { name = "db-retry", specifier = ">=0.9.1" },
     { name = "granian", extras = ["uvloop"] },
     { name = "lite-bootstrap", extras = ["litestar-all"] },
     { name = "litestar", extras = ["jwt"] },
@@ -480,15 +480,15 @@ wheels = [
 
 [[package]]
 name = "db-retry"
-version = "0.8.1"
+version = "0.9.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asyncpg" },
     { name = "sqlalchemy", extra = ["asyncio"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c6/b1/e00347fb2f3dbbff67cbc4fec36f1fc30355dadb62a4f99f539ca8325e0c/db_retry-0.8.1.tar.gz", hash = "sha256:12cfcbaa851f46567723b97875d9990b3747a04b41db93909b43f43f9aa5b1d9", size = 9198, upload-time = "2026-10-17T07:45:22.517Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bf/6e/a901b732bc0317e0df04adcbe98df10c484235315e20358910f2c9cb733d/db_retry-0.9.1.tar.gz", hash = "sha256:d02f4915e7e5aeff0c068eae15767f747d34921bf51b61d3dce13b3e9c314f4d", size = 9610, upload-time = "2026-11-04T09:21:20.496Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/02/7f/65efee5727d4a5d3d29b7300a1f165d872c46a4cceb828819a0f13fc9217/db_retry-0.8.1-py3-none-any.whl", hash = "sha256:95e2346d6ea5ae29964f1059128a623665f4e6046f477fc7e2970cf1969dda91", size = 9782, upload-time = "2026-10-17T07:45:21.458Z" },
+    { url = "https://files.pythonhosted.org/packages/64/50/b523cc7a6025a565bbf912086a23d3e0c0d76882c5f25089b394835b0326/db_retry-0.9.1-py3-none-any.whl", hash = "sha256:6696db081d8ad35f7b8eb3301095d82e97fd7e14f0eca70363704093f012080b", size = 10209, upload-time = "2026-11-04T09:21:19.65Z" },
 ]
 
 [[package]]
